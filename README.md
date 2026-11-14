@@ -5,7 +5,7 @@ Simulador web de una solución para **sectorizar los pedidos miniticket de despa
 
 > "Se ordena de día, se ejecuta de noche. PANAL decide qué pedidos van juntos; la COLMENA hace que lleguen a tiempo."
 
-🔗 **Demo en vivo:** _(se completa con el link de GitHub Pages al publicar)_
+🔗 **Demo en vivo:** https://andyferaldo.github.io/panal-colmena/
 
 ## En 1 minuto (guía para el jurado)
 1. Abre la demo y presiona **▶ Modo demo**: un recorrido guiado de 9 pasos (~3 min). Flechas ← → del teclado para avanzar.
