@@ -1,0 +1,134 @@
+@import 'tailwindcss';
+
+/* Identidad visual: Falabella (lima / verdes) + Innova Ulima (turquesa / naranja) */
+@theme {
+  --font-sans: 'Poppins', system-ui, sans-serif;
+  --color-lima: #c6d420;
+  --color-lima-soft: #eef3c2;
+  --color-bosque: #12301f;
+  --color-bosque-2: #1c4a2f;
+  --color-verde: #7dba29;
+  --color-turq: #00808d;
+  --color-turq-soft: #d7eef0;
+  --color-naranja: #f26b21;
+  --color-naranja-soft: #fde6d8;
+  --color-crema: #f6f8ec;
+  --color-tinta: #1e2a22;
+  --color-gris: #5b6b60;
+  --color-linea: #e2e7d3;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  background: var(--color-crema);
+  color: var(--color-tinta);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.card {
+  @apply rounded-2xl bg-white shadow-[0_1px_2px_rgba(18,48,31,.06),0_4px_16px_rgba(18,48,31,.06)];
+}
+.card-dark {
+  @apply rounded-2xl bg-bosque text-white;
+}
+.chip {
+  @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+}
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50;
+}
+.btn-lima {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 bg-lima text-bosque hover:brightness-95;
+}
+.btn-dark {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 bg-bosque text-white hover:bg-bosque-2;
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 border border-linea bg-white text-bosque hover:bg-crema;
+}
+.btn-turq {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 bg-turq text-white hover:brightness-110;
+}
+.btn-naranja {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition active:scale-[.98] disabled:opacity-50 bg-naranja text-white hover:brightness-105;
+}
+.h-title {
+  @apply text-2xl font-extrabold tracking-tight text-bosque md:text-3xl;
+}
+.hexbg {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zm0 32L0 82V66l28-16 28 16v16L28 98z' fill='none' stroke='%23C6D420' stroke-opacity='.18' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
+.leaflet-container {
+  isolation: isolate; /* los controles del mapa no se montan sobre la barra superior */
+  z-index: 0;
+  font-family: var(--font-sans);
+  background: #eef0e6;
+}
+.osm-tiles {
+  /* aspecto limpio tipo "Google Maps": menos saturación para que resalten los panales */
+  filter: saturate(0.45) brightness(1.04) contrast(0.95);
+}
+.leaflet-div-icon.clean {
+  background: transparent;
+  border: 0;
+}
+.cell-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #12301f;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+  text-align: center;
+  line-height: 20px;
+}
+
+@keyframes drop {
+  from {
+    transform: translateY(-14px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.anim-drop {
+  animation: drop 0.45s ease-out both;
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+.anim-pop {
+  animation: pop 0.35s ease-out both;
+}
+@keyframes buzz {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-3deg);
+  }
+}
+.anim-buzz {
+  animation: buzz 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .anim-buzz,
+  .anim-drop,
+  .anim-pop {
+    animation: none;
+  }
+}
