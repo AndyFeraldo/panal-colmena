@@ -5,7 +5,7 @@ Simulador web de una solución para **sectorizar los pedidos miniticket de despa
 
 > "Cada pedido tiene su casilla. Cada moto tiene su Torre." — Se ordena de día, se ejecuta de noche.
 
-🔗 **Demo en vivo:** https://andyferaldo.github.io/panal-colmena/
+🔗 **Demo en vivo:** https://andyferaldo.github.io/torre-f/
 
 ## En 1 minuto (guía para el jurado)
 1. Abre la demo y presiona **▶ Modo demo**: un recorrido guiado de 10 pasos (~3 min). Flechas ← → del teclado para avanzar.
