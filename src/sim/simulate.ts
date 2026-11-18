@@ -1,14 +1,14 @@
-import { latLngToCell } from 'h3-js'
+import { latLngToCell } from './grid'
 import { applyMoves, assignOrders, proposeOverflowMoves } from './assign'
-import { assignColmenas } from './colmenas'
-import { COLMENA_POINTS } from './data'
+import { assignTorres } from './torres'
+import { TORRE_ZONES } from './data'
 import { learnFromDay } from './learning'
-import { H3_RES, buildHistory, expectedDemand, generateOrders, type History } from './orders'
-import { applyCellOverrides, buildPanales } from './panales'
-import type { Params } from './params'
+import { buildHistory, expectedDemand, generateOrders, type History } from './orders'
+import { applyCellOverrides, buildCuadrantes } from './cuadrantes'
+import { DEMAND_LEVELS, type Params } from './params'
 import { makeRng, normal } from './rng'
-import { baselineDistrictFifo, panalScenario } from './scenarios'
-import type { Order, SimInput, SimResult } from './types'
+import { baselineDistrictFifo, tableroScenario } from './scenarios'
+import type { CapacityRow, Order, SimInput, SimResult } from './types'
 
 const historyCache = new Map<number, History>()
 export function getHistory(p: Params): History {
@@ -20,7 +20,7 @@ export function getHistory(p: Params): History {
   return h
 }
 
-/** Dificultad real de cada celda (edificios, tráfico, portería): multiplica el tiempo por parada. */
+/** Dificultad real de cada casilla (edificios, tráfico, portería): multiplica el tiempo por parada. */
 export function cellDifficulty(cell: string, seed: number): number {
   const rng = makeRng(seed, `diff:${cell}`)
   const base = Math.exp(normal(rng) * 0.12)
@@ -31,23 +31,23 @@ export function buildMap(input: SimInput) {
   const { params: p, level, weekday } = input
   const h = getHistory(p)
   const demand = expectedDemand(h, p, level, weekday)
-  let map = buildPanales(demand, h.cellDistrict, p, level, weekday)
+  let map = buildCuadrantes(demand, h.cellDistrict, p, level, weekday)
   map = applyCellOverrides(map, input.overrides, p)
-  const colmenas = assignColmenas(map.panales, COLMENA_POINTS, p, level === 'Cyber' ? 2 : 1)
-  return { map, colmenas }
+  const torres = assignTorres(map.cuadrantes, TORRE_ZONES, p, level === 'Cyber' ? 2 : 1)
+  return { map, torres }
 }
 
-/** Corre la simulación completa: panales, colmenas, pedidos del día, 3 escenarios, KPIs y aprendizaje */
+/** Corre la simulación completa: cuadrantes, Torres, pedidos del día, 3 escenarios, KPIs y aprendizaje */
 export function runSimulation(input: SimInput): SimResult {
   const t0 = performance.now()
   const p = input.params
-  const { map, colmenas } = buildMap(input)
+  const { map, torres } = buildMap(input)
   const orders = generateOrders(p, input.level, input.weekday)
 
   const difficulty: Record<string, number> = {}
   const trueCell = new Map<string, string>()
   for (const o of orders) {
-    const c = latLngToCell(o.lat, o.lng, H3_RES)
+    const c = latLngToCell(o.lat, o.lng)
     trueCell.set(o.id, c)
     if (difficulty[c] === undefined) difficulty[c] = cellDifficulty(c, p.seed)
   }
@@ -59,14 +59,14 @@ export function runSimulation(input: SimInput): SimResult {
   // la asignación "cruda" (antes de aprobar desbordes) se muestra en el HUB; los escenarios usan los movimientos aplicados
   const assignment = { ...raw, moves }
   const applied = applyMoves(raw, moves)
-  const B = panalScenario('B', orders, applied, map, colmenas, p, serviceMult)
-  const C = panalScenario('C', orders, applied, map, colmenas, p, serviceMult)
+  const B = tableroScenario('B', orders, applied, map, torres, p, serviceMult)
+  const C = tableroScenario('C', orders, applied, map, torres, p, serviceMult)
   const { items, mapAfter } = learnFromDay(C, map, moves, p)
   return {
     input,
     orders,
     map,
-    colmenas,
+    torres,
     assignment,
     scenarios: { A, B, C },
     learning: items,
@@ -74,4 +74,26 @@ export function runSimulation(input: SimInput): SimResult {
     cellDifficulty: difficulty,
     computeMs: performance.now() - t0,
   }
+}
+
+/** ¿Cuántos motorizados y camiones se necesitan? Corre el día en los 4 niveles de demanda con los mismos supuestos. */
+export function capacityByLevel(input: SimInput): CapacityRow[] {
+  return DEMAND_LEVELS.map((level) => {
+    const r = runSimulation({ ...input, level, overrides: {} })
+    const { A, C } = r.scenarios
+    return {
+      level,
+      orders: r.orders.length,
+      routesToday: A.kpis.routes,
+      motosToday: A.kpis.motosNeeded,
+      routesTorre: C.kpis.routes,
+      motosTorre: C.kpis.motosNeeded,
+      torres: C.torreTrips.length,
+      trucks: C.kpis.trucks,
+      sortEnd: C.kpis.sortEnd,
+      otdToday: A.kpis.otd,
+      otdTorre: C.kpis.otd,
+      maxStopsTorre: C.kpis.maxStops,
+    }
+  })
 }

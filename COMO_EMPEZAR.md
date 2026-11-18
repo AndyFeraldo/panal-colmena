@@ -2,11 +2,11 @@
 
 ## 1. Crea el repositorio en GitHub
 1. Entra a github.com → botón **New** (nuevo repositorio).
-2. Nombre: `panal-colmena` · Público (para que el jurado lo vea) · **sin** README (ya lo traemos).
+2. Nombre: `cuadrante-torre` · Público (para que el jurado lo vea) · **sin** README (ya lo traemos).
 3. Créalo y deja la página abierta.
 
 ## 2. Prepara la carpeta en tu computadora
-1. Descomprime este ZIP en una carpeta, por ejemplo `Documentos/panal-colmena`.
+1. Descomprime este ZIP en una carpeta, por ejemplo `Documentos/cuadrante-torre`.
 2. Verifica que dentro estén `CLAUDE.md`, `README.md`, `docs/` y `public/`.
 
 ## 3. Abre Claude Code en esa carpeta
@@ -15,11 +15,11 @@
 ## 4. Pega este primer mensaje en Claude Code
 ```
 Lee CLAUDE.md y todos los archivos de docs/ antes de empezar. Vas a construir el simulador
-web PANAL f. + COLMENA descrito ahí. Yo no sé programar: explícame en simple qué haces y
+web TORRE f. descrito ahí. Yo no sé programar: explícame en simple qué haces y
 qué necesito hacer yo en cada paso.
 
 1) Primero dame un resumen de lo que entendiste y el plan por fases, y espera mi OK.
-2) Conecta esta carpeta con mi repositorio de GitHub: https://github.com/TU_USUARIO/panal-colmena
+2) Conecta esta carpeta con mi repositorio de GitHub: https://github.com/TU_USUARIO/cuadrante-torre
 3) Ve fase por fase (sección 10 de CLAUDE.md). Al final de cada fase: build sin errores,
    tests en verde, commit y push, y dime qué puedo ver y dónde.
 4) Configura GitHub Pages con GitHub Actions desde la fase 1 y dame el link público.

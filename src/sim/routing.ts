@@ -12,7 +12,7 @@ function fastDist(a: LatLng, b: LatLng): number {
 
 /**
  * Orden de paradas (simula la Optimización de SimpliRoute): vecino más cercano + 2-opt.
- * Ruta abierta que parte del depósito (HUB o Colmena). Devuelve los índices en orden de visita.
+ * Ruta abierta que parte del depósito (HUB o Torre). Devuelve los índices en orden de visita.
  */
 export function sequenceRoute(start: LatLng, pts: LatLng[]): number[] {
   const n = pts.length
@@ -68,7 +68,8 @@ export function sequenceRoute(start: LatLng, pts: LatLng[]): number[] {
 
 export interface RouteDraft {
   label: string
-  panalId?: string
+  cuadId?: string
+  part?: number
   depotId: string
   depot: LatLng
   orders: Order[] // ya ordenados
@@ -89,7 +90,7 @@ export function routeLength(depot: LatLng, pts: LatLng[]): number {
 
 /**
  * Calcula ETA por parada con los supuestos. Si el volumen acumulado supera la mochila,
- * inserta una parada de recarga en el depósito (Colmena o, en el baseline, el HUB).
+ * inserta una parada de recarga en el depósito (Torre o, en el baseline, el HUB).
  */
 export function buildTimeline(
   draft: RouteDraft,
@@ -162,7 +163,8 @@ export function finalizeRoutes(
       id: `${scenario}-${String(i + 1).padStart(3, '0')}`,
       scenario,
       label: d.label,
-      panalId: d.panalId,
+      cuadId: d.cuadId,
+      part: d.part,
       depotId: d.depotId,
       depot: d.depot,
       readyTime: d.readyTime,

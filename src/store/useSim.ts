@@ -1,15 +1,16 @@
 import { create } from 'zustand'
 import { DEFAULT_PARAMS, type DemandLevel, type Params } from '../sim/params'
-import type { SimInput, SimResult } from '../sim/types'
+import type { CapacityRow, SimInput, SimResult } from '../sim/types'
 import type { ApiLogEntry } from '../integration/RoutingProvider'
 
 let worker: Worker | null = null
+let capWorker: Worker | null = null
 let reqId = 0
+let capId = 0
 let timer: ReturnType<typeof setTimeout> | null = null
 
-function getWorker(): Worker {
-  if (!worker) worker = new Worker(new URL('../workers/sim.worker.ts', import.meta.url), { type: 'module' })
-  return worker
+function newWorker(): Worker {
+  return new Worker(new URL('../workers/sim.worker.ts', import.meta.url), { type: 'module' })
 }
 
 interface SimState {
@@ -22,8 +23,12 @@ interface SimState {
   running: boolean
   error: string | null
   apiLog: ApiLogEntry[]
-  approvedMoves: string[] // celdas aprobadas en el HUB
-  approvedMinivans: string[] // colmenas con 2.ª minivan aprobada
+  approvedMoves: string[] // casillas aprobadas en el HUB
+  approvedTrucks: string[] // Torres con 2.º camión aprobado
+  riders: Record<string, number> // decisión del admin: motorizados por cuadrante esta noche
+  capacity: CapacityRow[] | null
+  capacityKey: string
+  capacityRunning: boolean
   demoStep: number | null
   setParams: (p: Partial<Params>) => void
   resetParams: () => void
@@ -36,7 +41,9 @@ interface SimState {
   log: (entries: ApiLogEntry[]) => void
   clearLog: () => void
   approveMove: (cell: string) => void
-  approveMinivan: (colmenaId: string) => void
+  approveTruck: (torreId: string) => void
+  setRiders: (cuadId: string, n: number | null) => void
+  runCapacity: () => void
   setDemoStep: (s: number | null) => void
 }
 
@@ -51,7 +58,11 @@ export const useSim = create<SimState>((set, get) => ({
   error: null,
   apiLog: [],
   approvedMoves: [],
-  approvedMinivans: [],
+  approvedTrucks: [],
+  riders: {},
+  capacity: null,
+  capacityKey: '',
+  capacityRunning: false,
   demoStep: null,
   setParams: (p) => {
     set((s) => ({ params: { ...s.params, ...p }, ...(p.pctPinWithPinF !== undefined ? { pctPin: p.pctPinWithPinF } : {}) }))
@@ -62,11 +73,11 @@ export const useSim = create<SimState>((set, get) => ({
     get().run()
   },
   setLevel: (level) => {
-    set({ level, overrides: {}, approvedMoves: [], approvedMinivans: [] })
+    set({ level, overrides: {}, approvedMoves: [], approvedTrucks: [] })
     get().run()
   },
   setWeekday: (weekday) => {
-    set({ weekday, approvedMoves: [], approvedMinivans: [] })
+    set({ weekday, approvedMoves: [], approvedTrucks: [] })
     get().run()
   },
   setPctPin: (pctPin) => {
@@ -88,13 +99,13 @@ export const useSim = create<SimState>((set, get) => ({
       const input: SimInput = { params: s.params, level: s.level, weekday: s.weekday, pctPin: s.pctPin, overrides: s.overrides }
       const id = ++reqId
       set({ running: true, error: null })
-      const w = getWorker()
-      w.onmessage = (e: MessageEvent<{ id: number; result?: SimResult; error?: string }>) => {
+      if (!worker) worker = newWorker()
+      worker.onmessage = (e: MessageEvent<{ id: number; result?: SimResult; error?: string }>) => {
         if (e.data.id !== reqId) return
         if (e.data.error) set({ running: false, error: e.data.error })
-        else set({ running: false, result: e.data.result!, approvedMoves: [], approvedMinivans: [] })
+        else set({ running: false, result: e.data.result!, approvedMoves: [], approvedTrucks: [], riders: {} })
       }
-      w.postMessage({ id, input })
+      worker.postMessage({ id, input })
     }
     if (immediate) go()
     else timer = setTimeout(go, 180)
@@ -102,6 +113,28 @@ export const useSim = create<SimState>((set, get) => ({
   log: (entries) => set((s) => ({ apiLog: [...entries, ...s.apiLog].slice(0, 80) })),
   clearLog: () => set({ apiLog: [] }),
   approveMove: (cell) => set((s) => ({ approvedMoves: [...s.approvedMoves, cell] })),
-  approveMinivan: (id) => set((s) => ({ approvedMinivans: [...s.approvedMinivans, id] })),
+  approveTruck: (id) => set((s) => ({ approvedTrucks: [...s.approvedTrucks, id] })),
+  setRiders: (cuadId, n) =>
+    set((s) => {
+      const riders = { ...s.riders }
+      if (n === null) delete riders[cuadId]
+      else riders[cuadId] = n
+      return { riders }
+    }),
+  /** Corre el día en los 4 niveles de demanda (Bajo · Normal · Alto · Cyber) en un worker aparte */
+  runCapacity: () => {
+    const s = get()
+    const key = JSON.stringify([s.params, s.weekday, s.pctPin])
+    if (s.capacityKey === key && (s.capacity || s.capacityRunning)) return
+    const input: SimInput = { params: s.params, level: s.level, weekday: s.weekday, pctPin: s.pctPin, overrides: {} }
+    if (!capWorker) capWorker = newWorker()
+    const id = ++capId
+    set({ capacityRunning: true, capacityKey: key, capacity: null })
+    capWorker.onmessage = (e: MessageEvent<{ id: number; capacity?: unknown; error?: string }>) => {
+      if (e.data.id !== capId) return
+      set({ capacityRunning: false, capacity: (e.data.capacity as CapacityRow[]) ?? null })
+    }
+    capWorker.postMessage({ id, input, kind: 'capacity' })
+  },
   setDemoStep: (demoStep) => set({ demoStep }),
 }))

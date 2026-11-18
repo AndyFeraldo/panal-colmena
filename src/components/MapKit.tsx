@@ -1,16 +1,36 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import L from 'leaflet'
 import { CircleMarker, GeoJSON, MapContainer, Marker, Polygon, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
-import { cellToBoundary, cellsToMultiPolygon } from 'h3-js'
 import GoogleMutant from 'leaflet.gridlayer.googlemutant/src/Leaflet.GoogleMutant.mjs'
 import { CLEAN_STYLE, GOOGLE_KEY, loadGoogleMaps, useGoogleMaps } from './googleMaps'
 import { DISTRICT_GEOJSON, HUB, type LatLng } from '../sim/data'
-import type { Colmena, Panal, Route } from '../sim/types'
-import { cellCenter } from '../sim/panales'
+import type { Torre, Cuadrante, Route } from '../sim/types'
+import { cellBoundary, cellCenter, cellEdges, cellParity } from '../sim/grid'
 
-// Paleta suave para panales (se distinguen y respetan el contraste del texto encima)
-export const PANAL_PALETTE = ['#C6D420', '#8FB3E8', '#F4A27A', '#5FB8B2', '#A8D27A', '#E8C35A', '#C59BD8']
+// Paleta suave para cuadrantes (se distinguen y respetan el contraste del texto encima)
+export const CUAD_PALETTE = ['#C6D420', '#8FB3E8', '#F4A27A', '#5FB8B2', '#A8D27A', '#E8C35A', '#C59BD8']
 export const LIMA_CENTER: [number, number] = [-12.08, -77.02]
+
+// Mapa de calor: paquetes por casilla (escala secuencial lima → verde oscuro)
+export const HEAT_COLORS = ['#F4F7D9', '#E2EC9A', '#C6D420', '#7DBA29', '#2E7D3C', '#12301F']
+export function heatBreaks(values: number[]): number[] {
+  const v = values.filter((x) => x > 0).sort((a, b) => a - b)
+  if (!v.length) return [1, 2, 3, 4, 5]
+  const q = (f: number) => Math.max(1, Math.round(v[Math.min(v.length - 1, Math.floor(f * v.length))]))
+  const b = [q(0.2), q(0.4), q(0.6), q(0.8), q(0.95)]
+  for (let i = 1; i < b.length; i++) if (b[i] <= b[i - 1]) b[i] = b[i - 1] + 1
+  return b
+}
+export function heatColor(v: number, breaks: number[]): string {
+  let i = 0
+  while (i < breaks.length && v >= breaks[i]) i++
+  return HEAT_COLORS[i]
+}
+
+/** Pieza Torre (ícono de marca) como SVG en texto, para marcadores del mapa */
+export function rookSvg(fill: string, text: string, h = 18): string {
+  return `<svg width="${h * 0.8}" height="${h}" viewBox="0 0 40 50" style="display:block"><path fill="${fill}" d="M7 3h6v5h4V3h6v5h4V3h6v11l-4 4v16l6 7v5H5v-5l6-7V18l-4-4z"/><text x="20" y="35" text-anchor="middle" font-family="Poppins" font-weight="800" font-size="12" fill="${text}">f.</text></svg>`
+}
 
 export function BaseMap({
   children,
@@ -138,82 +158,190 @@ export function DistrictLayer({ highlight }: { highlight?: string[] }) {
 }
 
 const boundaryCache = new Map<string, [number, number][]>()
+/** Rombo de la casilla como polígono para Leaflet */
 export function cellPoly(cell: string): [number, number][] {
   let b = boundaryCache.get(cell)
   if (!b) {
-    b = cellToBoundary(cell) as [number, number][]
+    b = cellBoundary(cell)
     boundaryCache.set(cell, b)
   }
   return b
 }
 
-export function PanalLayer({
-  panales,
-  cellToPanal,
+export type MapMode = 'calor' | 'cuadrantes' | 'tablero'
+export const MAP_MODES: { key: MapMode; label: string; hint: string }[] = [
+  { key: 'calor', label: '🔥 Calor', hint: 'Paquetes por casilla' },
+  { key: 'cuadrantes', label: '◆ Cuadrantes', hint: 'Un color por ruta' },
+  { key: 'tablero', label: '♜ Tablero', hint: 'Negro = Torre · Blanco = HUB' },
+]
+
+export function MapModePicker({ mode, onChange }: { mode: MapMode; onChange: (m: MapMode) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1 rounded-xl bg-white p-1 shadow-sm">
+      {MAP_MODES.map((m) => (
+        <button
+          key={m.key}
+          onClick={() => onChange(m.key)}
+          title={m.hint}
+          className={`rounded-lg px-3 py-1.5 text-xs font-bold ${mode === m.key ? 'bg-bosque text-lima' : 'text-bosque hover:bg-crema'}`}
+        >
+          {m.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** Leyenda del modo de mapa (se lee sin depender solo del color: lleva números y textos) */
+export function MapLegend({ mode, breaks, unit = 'paquetes por casilla' }: { mode: MapMode; breaks: number[]; unit?: string }) {
+  if (mode === 'calor')
+    return (
+      <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-gris">
+        <span>{unit}:</span>
+        {HEAT_COLORS.map((c, i) => (
+          <span key={c} className="flex items-center gap-1">
+            <i className="inline-block h-3 w-3 rotate-45 rounded-[2px] border border-black/10" style={{ background: c }} />
+            {i === 0
+              ? `<${breaks[0]}`
+              : i === HEAT_COLORS.length - 1
+                ? `≥${breaks[i - 1]}`
+                : breaks[i] - 1 === breaks[i - 1]
+                  ? `${breaks[i - 1]}`
+                  : `${breaks[i - 1]}–${breaks[i] - 1}`}
+          </span>
+        ))}
+      </div>
+    )
+  if (mode === 'tablero')
+    return (
+      <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-gris">
+        <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rotate-45 rounded-[2px] bg-bosque" />Cuadrante negro: lo abastece una Torre</span>
+        <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rotate-45 rounded-[2px] border border-gris/40 bg-white" />Cuadrante blanco: sale directo del HUB</span>
+      </div>
+    )
+  return <div className="text-[11px] font-semibold text-gris">Cada color es un cuadrante (1 ruta de ≤50 paquetes). Dos vecinos nunca comparten color.</div>
+}
+
+export function CuadranteLayer({
+  cuadrantes,
+  cellToCuad,
   selected,
-  onPanalClick,
+  onCuadranteClick,
   onCellClick,
   fillOpacity = 0.55,
   showOutline = true,
   dimOthers = false,
+  mode = 'cuadrantes',
+  heat,
+  breaks,
 }: {
-  panales: Panal[]
-  cellToPanal: Record<string, string>
+  cuadrantes: Cuadrante[]
+  cellToCuad: Record<string, string>
   selected?: string | null
-  onPanalClick?: (id: string) => void
+  onCuadranteClick?: (id: string) => void
   onCellClick?: (cell: string) => void
   fillOpacity?: number
   showOutline?: boolean
   dimOthers?: boolean
+  mode?: MapMode
+  heat?: Record<string, number>
+  breaks?: number[]
 }) {
-  const color = useMemo(() => new Map(panales.map((p) => [p.id, PANAL_PALETTE[p.color % PANAL_PALETTE.length]])), [panales])
+  const byId = useMemo(() => new Map(cuadrantes.map((q) => [q.id, q])), [cuadrantes])
+  const hb = useMemo(() => breaks ?? heatBreaks(Object.values(heat ?? {})), [breaks, heat])
+  // bordes entre cuadrantes distintos (o con el exterior): un solo trazo multi-segmento
   const outlines = useMemo(() => {
-    if (!showOutline) return []
-    const byPanal = new Map<string, string[]>()
-    for (const [c, id] of Object.entries(cellToPanal)) {
-      const a = byPanal.get(id) ?? []
-      a.push(c)
-      byPanal.set(id, a)
+    if (!showOutline) return { all: [] as [number, number][][], sel: [] as [number, number][][] }
+    const all: [number, number][][] = []
+    const sel: [number, number][][] = []
+    for (const [cell, id] of Object.entries(cellToCuad)) {
+      for (const e of cellEdges(cell)) {
+        const other = cellToCuad[e.neighbor]
+        if (other === id) continue
+        if (other && other < id) continue // cada lado compartido se dibuja una vez
+        all.push([e.a, e.b])
+        if (selected && (id === selected || other === selected)) sel.push([e.a, e.b])
+      }
     }
-    return [...byPanal].map(([id, cells]) => ({ id, poly: cellsToMultiPolygon(cells, false) as unknown as [number, number][][][] }))
-  }, [cellToPanal, showOutline])
+    return { all, sel }
+  }, [cellToCuad, showOutline, selected])
+
+  const fillFor = (cell: string, id: string): string => {
+    if (mode === 'calor') return heatColor(heat?.[cell] ?? 0, hb)
+    if (mode === 'tablero') {
+      const dark = !!byId.get(id)?.torreId
+      const odd = cellParity(cell) === 1
+      return dark ? (odd ? '#1C4A2F' : '#0B2215') : odd ? '#E7EBCF' : '#FFFFFF'
+    }
+    const q = byId.get(id)
+    return q ? CUAD_PALETTE[q.color % CUAD_PALETTE.length] : '#ccc'
+  }
+  const baseOpacity = mode === 'calor' ? Math.max(fillOpacity, 0.7) : mode === 'tablero' ? 0.7 : fillOpacity
+  const lineColor = mode === 'tablero' ? '#C6D420' : '#12301F'
   return (
     <>
-      {Object.entries(cellToPanal).map(([cell, id]) => {
+      {Object.entries(cellToCuad).map(([cell, id]) => {
         const sel = selected === id
         const dim = dimOthers && selected && !sel
         return (
           <Polygon
-            key={cell + id}
+            key={cell + id + mode}
             positions={cellPoly(cell)}
             pathOptions={{
-              color: '#ffffff',
+              color: mode === 'tablero' ? 'transparent' : '#ffffff',
               weight: 0.6,
-              fillColor: color.get(id) ?? '#ccc',
-              fillOpacity: dim ? 0.12 : sel ? 0.85 : fillOpacity,
+              fillColor: fillFor(cell, id),
+              fillOpacity: dim ? 0.12 : sel ? Math.min(0.9, baseOpacity + 0.25) : baseOpacity,
             }}
             eventHandlers={{
               click: () => {
                 onCellClick?.(cell)
-                onPanalClick?.(id)
+                onCuadranteClick?.(id)
               },
             }}
-          />
+          >
+            {mode === 'calor' && heat && (
+              <Tooltip sticky>
+                {Math.round(heat[cell] ?? 0)} paquetes · cuadrante {byId.get(id)?.name}
+              </Tooltip>
+            )}
+          </Polygon>
         )
       })}
-      {outlines.map((o) => (
-        <Polygon
-          key={'o' + o.id}
-          positions={o.poly}
+      {showOutline && (
+        <Polyline positions={outlines.all} interactive={false} pathOptions={{ color: lineColor, weight: mode === 'tablero' ? 2.2 : 1.6, opacity: 0.85 }} />
+      )}
+      {outlines.sel.length > 0 && <Polyline positions={outlines.sel} interactive={false} pathOptions={{ color: '#F26B21', weight: 4, opacity: 1 }} />}
+    </>
+  )
+}
+
+/** Nombre de cada cuadrante (A3, H12…) en su centro, visible desde cierto zoom */
+export function CuadranteNames({ cuadrantes, minZoom = 12, dark }: { cuadrantes: Cuadrante[]; minZoom?: number; dark?: (q: Cuadrante) => boolean }) {
+  const map = useMap()
+  const [z, setZ] = useState(map.getZoom())
+  useMapEvents({ zoomend: () => setZ(map.getZoom()) })
+  if (z < minZoom) return null
+  return (
+    <>
+      {cuadrantes.map((q) => (
+        <Marker
+          key={q.id}
+          position={[q.centroid.lat, q.centroid.lng]}
           interactive={false}
-          pathOptions={{ color: selected === o.id ? '#F26B21' : '#12301F', weight: selected === o.id ? 4 : 2, fill: false, opacity: 0.85 }}
+          icon={L.divIcon({
+            className: 'leaflet-div-icon clean',
+            html: `<div class="cuad-label${dark?.(q) ? ' on-dark' : ''}">${q.name}</div>`,
+            iconSize: [34, 18],
+            iconAnchor: [17, 9],
+          })}
         />
       ))}
     </>
   )
 }
 
-/** Número de pedidos esperados por celda (visible al hacer zoom) */
+/** Número de paquetes esperados por casilla (visible al hacer zoom) */
 export function CellLabels({ demand, minZoom = 14 }: { demand: Record<string, number>; minZoom?: number }) {
   const map = useMap()
   const [view, setView] = useState({ z: map.getZoom(), b: map.getBounds() })
@@ -258,35 +386,39 @@ export function HubMarker() {
   )
 }
 
-export function colmenaIcon(label: string, active = false) {
+export function torreIcon(label: string, active = false) {
   return L.divIcon({
     className: 'leaflet-div-icon clean',
-    html: `<div style="background:${active ? '#F26B21' : '#00808D'};color:#fff;font:700 11px Poppins;padding:3px 7px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff">🚐 ${label}</div>`,
-    iconSize: [110, 24],
-    iconAnchor: [55, 12],
+    html: `<div style="display:flex;align-items:center;gap:5px;background:${active ? '#F26B21' : '#00808D'};color:#fff;font:700 11px Poppins;padding:3px 9px 3px 6px;border-radius:999px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff">${rookSvg('#fff', active ? '#F26B21' : '#00808D', 17)}${label}</div>`,
+    iconSize: [120, 26],
+    iconAnchor: [60, 13],
   })
 }
 
-export function ColmenaMarkers({
-  colmenas,
-  panales,
+export function torreLabel(t: Torre): string {
+  return t.letter ? `Torre ${t.letter} · ${t.short}` : `Torre ${t.short}`
+}
+
+export function TorreMarkers({
+  torres,
+  cuadrantes,
   showLinks = true,
   activeId,
 }: {
-  colmenas: Colmena[]
-  panales: Panal[]
+  torres: Torre[]
+  cuadrantes: Cuadrante[]
   showLinks?: boolean
   activeId?: string | null
 }) {
-  const byId = new Map(panales.map((p) => [p.id, p]))
+  const byId = new Map(cuadrantes.map((p) => [p.id, p]))
   return (
     <>
-      {colmenas
-        .filter((c) => c.panalIds.length > 0)
+      {torres
+        .filter((c) => c.cuadIds.length > 0)
         .map((c) => (
           <Fragment key={c.id}>
             {showLinks &&
-              c.panalIds.map((pid) => {
+              c.cuadIds.map((pid) => {
                 const p = byId.get(pid)
                 if (!p) return null
                 return (
@@ -301,9 +433,9 @@ export function ColmenaMarkers({
                   />
                 )
               })}
-            <Marker position={[c.lat, c.lng]} icon={colmenaIcon(c.short, activeId === c.id)} zIndexOffset={500}>
+            <Marker position={[c.lat, c.lng]} icon={torreIcon(torreLabel(c), activeId === c.id)} zIndexOffset={500}>
               <Tooltip>
-                {c.name} · {c.panalIds.length} panales · ~{Math.round(c.expLoad)} pedidos · {c.minivans} minivan(es)
+                {torreLabel(c)} · punto medio de {c.cuadIds.length} cuadrantes · ~{Math.round(c.expLoad)} paquetes · {c.trucks} camión(es)
               </Tooltip>
             </Marker>
           </Fragment>
@@ -325,9 +457,9 @@ export function RouteLine({ route, color = '#12301F', numbered = false, weight =
               position={[s.lat, s.lng]}
               icon={L.divIcon({
                 className: 'leaflet-div-icon clean',
-                html: `<div style="background:#F26B21;color:#fff;font:700 10px Poppins;padding:2px 6px;border-radius:999px;border:2px solid #fff;white-space:nowrap">↻ Recarga</div>`,
-                iconSize: [70, 20],
-                iconAnchor: [35, 30],
+                html: `<div style="background:#F26B21;color:#fff;font:700 10px Poppins;padding:2px 6px;border-radius:999px;border:2px solid #fff;white-space:nowrap">↻ Reabastecer</div>`,
+                iconSize: [84, 20],
+                iconAnchor: [42, 30],
               })}
             />
           ) : (

@@ -2,17 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Loader2, Pause, Play, X } from 'lucide-react'
 import { useSim } from '../store/useSim'
-import { BASE } from './ui'
+import { BASE, TorreLogo } from './ui'
 import { demoSteps } from './demoSteps'
 
 const ROLES = [
   { label: 'Inicio', to: '/', match: ['/'] },
   { label: 'Cliente', to: '/cliente/checkout', match: ['/cliente'] },
   { label: 'Planificador', to: '/planificador', match: ['/planificador'] },
+  { label: 'Admin', to: '/admin', match: ['/admin'] },
   { label: 'HUB', to: '/hub', match: ['/hub'] },
-  { label: 'Colmena', to: '/colmena', match: ['/colmena'] },
+  { label: 'Torre', to: '/torre', match: ['/torre'] },
   { label: 'Motorizado', to: '/motorizado', match: ['/motorizado'] },
-  { label: 'Gerencia', to: '/gerencia', match: ['/gerencia', '/reporte'] },
+  { label: 'Gerencia', to: '/gerencia', match: ['/gerencia', '/reporte', '/capacidad', '/evaluacion'] },
 ]
 
 const SUBNAV: Record<string, { label: string; to: string }[]> = {
@@ -22,6 +23,8 @@ const SUBNAV: Record<string, { label: string; to: string }[]> = {
   ],
   Gerencia: [
     { label: 'P7 · Comparador de escenarios', to: '/gerencia' },
+    { label: 'Capacidad: motos y camiones', to: '/capacidad' },
+    { label: '✓ Evaluación vs. el reto', to: '/evaluacion' },
     { label: 'P9 · Reporte y aprendizaje', to: '/reporte' },
   ],
 }
@@ -62,8 +65,9 @@ export default function Layout() {
           <Link to="/" className="flex shrink-0 items-center gap-3" aria-label="Inicio">
             <img src={`${BASE}brand/falabella.png`} alt="falabella." className="h-7 md:h-8" />
             <span className="hidden h-8 w-px bg-linea sm:block" />
-            <span className="hidden text-sm font-extrabold leading-tight text-bosque sm:block">
-              PANAL <span className="text-verde">f.</span> + <span className="text-turq">COLMENA</span>
+            <span className="hidden items-center gap-1.5 text-base font-extrabold leading-tight text-bosque sm:flex">
+              <TorreLogo className="h-7" fill="#12301F" text="#C6D420" />
+              TORRE <span className="text-verde">f.</span>
             </span>
           </Link>
           <nav className="mx-auto hidden min-w-0 items-center gap-1 overflow-x-auto lg:flex" aria-label="Selector de rol">
@@ -145,7 +149,7 @@ export default function Layout() {
   )
 }
 
-const STEP_SECONDS = 20
+const STEP_SECONDS = 18
 
 function DemoBar({ step }: { step: number }) {
   const navigate = useNavigate()
@@ -198,7 +202,7 @@ function DemoBar({ step }: { step: number }) {
   return (
     <div className="fixed inset-x-0 bottom-7 z-[950] px-3">
       <div className="anim-pop mx-auto flex max-w-4xl items-center gap-3 rounded-2xl bg-bosque p-3 text-white shadow-2xl ring-2 ring-lima md:gap-4 md:p-4">
-        <img src={`${BASE}brand/abella.svg`} alt="Abella" className="anim-buzz hidden h-16 shrink-0 sm:block" />
+        <TorreLogo className="anim-float hidden h-16 shrink-0 sm:block" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="text-sm font-extrabold text-lima md:text-base">{s.title}</span>

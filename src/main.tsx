@@ -12,13 +12,16 @@ import Home from './screens/Home'
 import Checkout from './screens/Checkout'
 import Planner from './screens/Planner'
 import Hub from './screens/Hub'
-import ColmenaScreen from './screens/ColmenaScreen'
+import TorreScreen from './screens/TorreScreen'
 import Rider from './screens/Rider'
 import Delivery from './screens/Delivery'
 import Compare from './screens/Compare'
 import Integration from './screens/Integration'
 import Report from './screens/Report'
 import Assumptions from './screens/Assumptions'
+import Admin from './screens/Admin'
+import Capacity from './screens/Capacity'
+import Evaluation from './screens/Evaluation'
 
 const router = createHashRouter([
   {
@@ -29,11 +32,14 @@ const router = createHashRouter([
       { path: 'cliente/checkout', element: <Checkout /> },
       { path: 'cliente/entrega', element: <Delivery /> },
       { path: 'planificador', element: <Planner /> },
+      { path: 'admin', element: <Admin /> },
       { path: 'hub', element: <Hub /> },
-      { path: 'colmena', element: <ColmenaScreen /> },
+      { path: 'torre', element: <TorreScreen /> },
       { path: 'motorizado', element: <Rider /> },
       { path: 'gerencia', element: <Compare /> },
       { path: 'reporte', element: <Report /> },
+      { path: 'capacidad', element: <Capacity /> },
+      { path: 'evaluacion', element: <Evaluation /> },
       { path: 'integracion', element: <Integration /> },
       { path: 'supuestos', element: <Assumptions /> },
     ],

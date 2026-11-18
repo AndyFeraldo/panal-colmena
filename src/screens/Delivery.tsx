@@ -82,7 +82,7 @@ function DeliveryInner() {
               </div>
             </div>
             <div className="card border-l-4 border-verde p-5">
-              <div className="text-[11px] font-bold uppercase text-verde">Con PANAL</div>
+              <div className="text-[11px] font-bold uppercase text-verde">Con TORRE f.</div>
               <div className="text-3xl font-extrabold text-bosque">
                 {fmtTime(ctx.winStart)} – {fmtTime(ctx.winEnd)}
               </div>

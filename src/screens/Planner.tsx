@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Hexagon, Send, Undo2, MousePointerClick } from 'lucide-react'
-import { BaseMap, CellLabels, ColmenaMarkers, DistrictLayer, HubMarker, PANAL_PALETTE, PanalLayer } from '../components/MapKit'
+import { Diamond, Send, Undo2, MousePointerClick } from 'lucide-react'
+import { BaseMap, CellLabels, TorreMarkers, DistrictLayer, HubMarker, CUAD_PALETTE, CuadranteLayer, CuadranteNames, MapLegend, MapModePicker, heatBreaks, type MapMode } from '../components/MapKit'
 import { KpiCard, NeedResult, ScreenHeader, SimBadge, Tag, fmtInt, fmtNum, fmtPct } from '../components/ui'
 import { routingProvider } from '../integration/MockSimpliRouteProvider'
-import { borderNeighbors } from '../sim/panales'
+import { borderNeighbors } from '../sim/cuadrantes'
 import { DEMAND_LEVELS, WEEKDAYS } from '../sim/params'
 import { useSim } from '../store/useSim'
 
@@ -65,25 +65,28 @@ function PlannerInner() {
   const [selected, setSelected] = useState<string | null>(null)
   const [cell, setCell] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
-  const { map, colmenas } = result
+  const [mode, setMode] = useState<MapMode>('calor')
+  const { map, torres } = result
 
   const stats = useMemo(() => {
-    const n = map.panales.length
-    const avg = map.panales.reduce((s, p) => s + p.expStops, 0) / n
-    const cross = map.panales.filter((p) => p.districts.length > 1).length / n
-    const usedCol = colmenas.filter((c) => c.panalIds.length > 0)
-    const inCol = map.panales.filter((p) => p.colmenaId).length
+    const n = map.cuadrantes.length
+    const avg = map.cuadrantes.reduce((s, p) => s + p.expStops, 0) / n
+    const cross = map.cuadrantes.filter((p) => p.districts.length > 1).length / n
+    const usedCol = torres.filter((c) => c.cuadIds.length > 0)
+    const inCol = map.cuadrantes.filter((p) => p.torreId).length
     return { n, avg, cross, usedCol, inCol }
-  }, [map, colmenas])
+  }, [map, torres])
 
-  const panal = map.panales.find((p) => p.id === selected)
-  const colmena = colmenas.find((c) => c.id === panal?.colmenaId)
-  const neighborsOfCell = cell ? borderNeighbors(cell, map.cellToPanal) : []
+  const breaks = useMemo(() => heatBreaks(Object.values(map.cellDemand)), [map])
+  const nm = (id: string) => map.cuadrantes.find((q) => q.id === id)?.name ?? id
+  const cuadrante = map.cuadrantes.find((p) => p.id === selected)
+  const torre = torres.find((c) => c.id === cuadrante?.torreId)
+  const neighborsOfCell = cell ? borderNeighbors(cell, map.cellToCuad) : []
 
   const publish = async () => {
     setPublishing(true)
-    const e1 = await routingProvider.publishZones(map.panales, 'P2 · Planificador')
-    const e2 = await routingProvider.publishVehicles(colmenas, 'P2 · Planificador')
+    const e1 = await routingProvider.publishZones(map.cuadrantes, 'P2 · Planificador')
+    const e2 = await routingProvider.publishVehicles(torres, 'P2 · Planificador')
     const e3 = await routingProvider.registerWebhook('P2 · Planificador')
     log([...e3, ...e2, ...e1])
     setPublishing(false)
@@ -94,7 +97,7 @@ function PlannerInner() {
     <div>
       <ScreenHeader
         kicker="P2 · Planificador logístico · de día"
-        title="Mapa de panales y Colmenas"
+        title="Tablero f.: mapa de calor, cuadrantes y Torres"
         right={
           <>
             <LevelPicker />
@@ -102,84 +105,92 @@ function PlannerInner() {
           </>
         }
       >
-        Lima en hexágonos H3 (res. 8). Cada color es un <b>panal</b> = una ruta estática de ~50 paradas, armado con 8 semanas de historial. Las líneas punteadas son los
-        límites de distrito: los panales los cruzan.
+        Lima como un tablero: <b>casillas en rombo de ~8 cuadras</b>. Las casillas vecinas se juntan en <b>cuadrantes de máximo 50 paquetes</b> (1 ruta), armados con 8 semanas de
+        historial y nombrados por su Torre (A1, A2…) o H si salen directo del HUB. Las líneas punteadas son los límites de distrito: los cuadrantes los cruzan.
       </ScreenHeader>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
         <div className="card relative overflow-hidden p-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2 pt-1">
+            <MapModePicker mode={mode} onChange={setMode} />
+            <MapLegend mode={mode} breaks={breaks} unit="Paquetes esperados por casilla" />
+          </div>
           <BaseMap className="h-[min(68vh,640px)]" zoom={11.5} center={[-12.09, -77.02]}>
-            <PanalLayer
-              panales={map.panales}
-              cellToPanal={map.cellToPanal}
+            <CuadranteLayer
+              cuadrantes={map.cuadrantes}
+              cellToCuad={map.cellToCuad}
               selected={selected}
-              onPanalClick={(id) => setSelected(id)}
+              onCuadranteClick={(id) => setSelected(id)}
               onCellClick={(c) => setCell(c)}
+              mode={mode}
+              heat={map.cellDemand}
+              breaks={breaks}
             />
-            <DistrictLayer highlight={panal?.districts} />
+            <DistrictLayer highlight={cuadrante?.districts} />
             <CellLabels demand={map.cellDemand} />
-            <ColmenaMarkers colmenas={colmenas} panales={map.panales} activeId={colmena?.id} />
+            <CuadranteNames cuadrantes={map.cuadrantes} minZoom={12} dark={(q) => (mode === 'tablero' ? !!q.torreId : mode === 'calor' ? q.expStops / Math.max(1, q.cells.length) >= breaks[3] : false)} />
+            <TorreMarkers torres={torres} cuadrantes={map.cuadrantes} activeId={torre?.id} />
             <HubMarker />
           </BaseMap>
           <div className="pointer-events-none absolute bottom-4 left-4 z-[500] flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold shadow">
-            <MousePointerClick size={13} /> Clic en un panal para ver su detalle · haz zoom para ver pedidos por celda
+            <MousePointerClick size={13} /> Clic en un cuadrante para ver su detalle · haz zoom para ver pedidos por casilla
           </div>
         </div>
 
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
-            <KpiCard label="Panales" value={stats.n} sub={`mapa ${map.level} · ${WEEKDAYS[map.weekday]}`} tone="dark" icon={<Hexagon size={12} />} />
-            <KpiCard label="Paradas prom." value={fmtNum(stats.avg)} sub="esperadas por panal" />
-            <KpiCard label="Cruzan distritos" value={fmtPct(stats.cross, 0)} sub="de los panales" />
-            <KpiCard label="Colmenas" value={stats.usedCol.length} sub={`${stats.inCol} panales · ${stats.usedCol.reduce((s, c) => s + c.minivans, 0)} minivan(es)`} tone="turq" />
+            <KpiCard label="Cuadrantes" value={stats.n} sub={`mapa ${map.level} · ${WEEKDAYS[map.weekday]}`} tone="dark" icon={<Diamond size={12} />} />
+            <KpiCard label="Paquetes prom." value={fmtNum(stats.avg)} sub="por cuadrante · tope 50" />
+            <KpiCard label="Cruzan distritos" value={fmtPct(stats.cross, 0)} sub="de los cuadrantes" />
+            <KpiCard label="Torres" value={stats.usedCol.length} sub={`${stats.inCol} cuadrantes · ${stats.usedCol.reduce((s, c) => s + c.trucks, 0)} camión(es)`} tone="turq" />
             <KpiCard label="Pedidos con pin" value={fmtPct(pctPin, 0)} sub="con Pin f." tone="lima" />
-            <KpiCard label="Celdas activas" value={fmtInt(Object.keys(map.cellToPanal).length)} sub="≈ 0,74 km² c/u" />
+            <KpiCard label="Casillas activas" value={fmtInt(Object.keys(map.cellToCuad).length)} sub="rombos de 0,8 km de lado" />
           </div>
           <div className="flex items-center gap-2">
             <SimBadge />
             <Tag kind="SUPUESTO">Historial sintético 8 semanas</Tag>
           </div>
 
-          {panal ? (
+          {cuadrante ? (
             <div className="card anim-pop p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="h-5 w-5 rounded-md" style={{ background: PANAL_PALETTE[panal.color % PANAL_PALETTE.length] }} />
-                  <span className="text-xl font-extrabold text-bosque">{panal.id}</span>
+                  <span className="h-5 w-5 rounded-md" style={{ background: CUAD_PALETTE[cuadrante.color % CUAD_PALETTE.length] }} />
+                  <span className="text-xl font-extrabold text-bosque">Cuadrante {cuadrante.name}</span>
                 </div>
                 <button className="text-xs text-gris hover:underline" onClick={() => setSelected(null)}>
                   cerrar
                 </button>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
-                <dt className="text-gris">Celdas</dt>
-                <dd className="font-semibold">{panal.cells.length}</dd>
-                <dt className="text-gris">Paradas esperadas</dt>
-                <dd className="font-semibold">{fmtNum(panal.expStops)}</dd>
+                <dt className="text-gris">Casillas</dt>
+                <dd className="font-semibold">{cuadrante.cells.length}</dd>
+                <dt className="text-gris">Paquetes esperados</dt>
+                <dd className="font-semibold">{fmtNum(cuadrante.expStops)} / 50</dd>
                 <dt className="text-gris">Volumen</dt>
-                <dd className="font-semibold">{fmtInt(panal.expVolume)} dm³</dd>
+                <dd className="font-semibold">{fmtInt(cuadrante.expVolume)} dm³</dd>
                 <dt className="text-gris">Tiempo estimado</dt>
                 <dd className="font-semibold">
-                  {Math.floor(panal.estMinutes / 60)} h {Math.round(panal.estMinutes % 60)} min
+                  {Math.floor(cuadrante.estMinutes / 60)} h {Math.round(cuadrante.estMinutes % 60)} min
                 </dd>
                 <dt className="text-gris">Distancia al HUB</dt>
-                <dd className="font-semibold">{fmtNum(panal.distHubKm)} km</dd>
+                <dd className="font-semibold">{fmtNum(cuadrante.distHubKm)} km</dd>
                 <dt className="text-gris">Sale desde</dt>
-                <dd className="font-semibold text-turq">{colmena ? `🚐 ${colmena.name}` : '🏭 HUB VES'}</dd>
+                <dd className="font-semibold text-turq">{torre ? `♜ ${torre.name}` : '🏭 HUB VES (directo)'}</dd>
               </dl>
               <div className="mt-3">
                 <div className="text-[11px] font-bold uppercase text-gris">Distritos que cruza</div>
                 <div className="mt-1 flex flex-wrap gap-1">
-                  {panal.districts.map((d) => (
+                  {cuadrante.districts.map((d) => (
                     <span key={d} className="chip bg-turq-soft text-turq">
                       {d}
                     </span>
                   ))}
                 </div>
               </div>
-              {cell && map.cellToPanal[cell] === panal.id && neighborsOfCell.length > 0 && (
+              {cell && map.cellToCuad[cell] === cuadrante.id && neighborsOfCell.length > 0 && (
                 <div className="mt-3 rounded-xl bg-crema p-3">
-                  <div className="text-xs font-bold text-bosque">Celda de borde seleccionada ({Math.round(map.cellDemand[cell] ?? 0)} pedidos esperados)</div>
+                  <div className="text-xs font-bold text-bosque">Casilla de borde seleccionada ({Math.round(map.cellDemand[cell] ?? 0)} paquetes esperados)</div>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {neighborsOfCell.map((n) => (
                       <button
@@ -190,19 +201,21 @@ function PlannerInner() {
                         }}
                         className="btn-dark !px-2.5 !py-1 !text-xs"
                       >
-                        Mover a {n}
+                        Mover a {nm(n)}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
-              {cell && map.cellToPanal[cell] === panal.id && neighborsOfCell.length === 0 && (
-                <p className="mt-3 text-xs text-gris">Esa celda está al interior del panal. Elige una celda del borde para moverla a un panal vecino.</p>
+              {cell && map.cellToCuad[cell] === cuadrante.id && neighborsOfCell.length === 0 && (
+                <p className="mt-3 text-xs text-gris">Esa casilla está al interior del cuadrante. Elige una casilla del borde para moverla a un cuadrante vecino.</p>
               )}
             </div>
           ) : (
-            <div className="card p-4 text-sm text-gris">Selecciona un panal en el mapa para ver qué distritos cruza, sus paradas, volumen, tiempo y su Colmena.</div>
+            <div className="card p-4 text-sm text-gris">Selecciona un cuadrante en el mapa para ver qué distritos cruza, sus paquetes, volumen, tiempo y su Torre.</div>
           )}
+
+          <ModeNote mode={mode} />
 
           {Object.keys(overrides).length > 0 && (
             <button onClick={clearOverrides} className="btn-ghost w-full">
@@ -212,9 +225,25 @@ function PlannerInner() {
           <button onClick={publish} disabled={publishing} className="btn-turq w-full !py-3 !text-base">
             <Send size={18} /> Publicar en SimpliRoute
           </button>
-          <p className="text-center text-[11px] text-gris">Panales → Zonas · Colmenas → Vehículo + inicio · Webhook de entregas (simulado)</p>
+          <p className="text-center text-[11px] text-gris">Cuadrantes → Zonas · Torres → Vehículo + inicio · Webhook de entregas (simulado)</p>
         </div>
       </div>
+    </div>
+  )
+}
+
+/** Por qué hay 3 vistas: el blanco/negro es la marca, el calor es lo que ayuda a decidir */
+function ModeNote({ mode }: { mode: MapMode }) {
+  const text: Record<MapMode, string> = {
+    calor:
+      'Mapa de calor: muestra dónde se concentran los paquetes. Es la vista para decidir (dónde poner una Torre, qué cuadrante partir). Las casillas oscuras tienen más paquetes.',
+    cuadrantes: 'Un color por cuadrante: sirve para ver los límites de cada ruta y que cruzan distritos. Dos vecinos nunca comparten color.',
+    tablero:
+      'Blanco y negro, como un tablero: negro = lo abastece una Torre, blanco = sale directo del HUB. Es la imagen de marca; es translúcido para no tapar las calles.',
+  }
+  return (
+    <div className="rounded-2xl bg-white p-3 text-xs text-gris shadow-sm">
+      <b className="text-bosque">¿Por qué esta vista?</b> {text[mode]}
     </div>
   )
 }

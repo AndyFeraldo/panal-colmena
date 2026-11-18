@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import L from 'leaflet'
 import { Marker, Polygon, useMap } from 'react-leaflet'
-import { gridDisk, latLngToCell } from 'h3-js'
+import { gridDisk, latLngToCell } from '../sim/grid'
 import { Check, Loader2, LocateFixed, Search, ShoppingCart, Timer } from 'lucide-react'
 import { GOOGLE_KEY, geocodeAddress } from '../components/googleMaps'
-import { BaseMap, PANAL_PALETTE, cellPoly } from '../components/MapKit'
+import { BaseMap, CUAD_PALETTE, cellPoly } from '../components/MapKit'
 import { NeedResult, PhoneFrame, ScreenHeader, Tag, fmtInt } from '../components/ui'
 import { ANA } from '../sim/data'
-import { H3_RES } from '../sim/orders'
 import { useSim } from '../store/useSim'
 
 const pinIcon = L.divIcon({
@@ -51,12 +50,12 @@ function CheckoutInner() {
   }
 
   const info = useMemo(() => {
-    const cell = latLngToCell(pos.lat, pos.lng, H3_RES)
-    let panalId = result.map.cellToPanal[cell]
-    if (!panalId) for (const n of gridDisk(cell, 2)) if (result.map.cellToPanal[n]) { panalId = result.map.cellToPanal[n]; break }
-    const panal = result.map.panales.find((p) => p.id === panalId)
-    const colmena = result.colmenas.find((c) => c.id === panal?.colmenaId)
-    return { cell, panal, colmena }
+    const cell = latLngToCell(pos.lat, pos.lng)
+    let cuadId = result.map.cellToCuad[cell]
+    if (!cuadId) for (const n of gridDisk(cell, 2)) if (result.map.cellToCuad[n]) { cuadId = result.map.cellToCuad[n]; break }
+    const cuadrante = result.map.cuadrantes.find((p) => p.id === cuadId)
+    const torre = result.torres.find((c) => c.id === cuadrante?.torreId)
+    return { cell, cuadrante, torre }
   }, [pos, result])
 
   useEffect(() => {
@@ -77,7 +76,7 @@ function CheckoutInner() {
     }
   }, [demoStep])
 
-  const color = info.panal ? PANAL_PALETTE[info.panal.color % PANAL_PALETTE.length] : '#C6D420'
+  const color = info.cuadrante ? CUAD_PALETTE[info.cuadrante.color % CUAD_PALETTE.length] : '#C6D420'
 
   return (
     <div>
@@ -150,12 +149,12 @@ function CheckoutInner() {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {[
-                { k: 'Celda H3 (res. 8)', v: info.cell.slice(0, 9) + '…', s: '≈ 0,74 km² · 7×7 cuadras' },
-                { k: 'Panal', v: info.panal?.id ?? '—', s: info.panal ? `${Math.round(info.panal.expStops)} paradas esperadas · ${info.panal.districts.join(' + ')}` : '' },
+                { k: 'Casilla', v: `◆ ${info.cell.replace(/-/g, '').replace(':', '·')}`, s: '◆ rombo de ~8 cuadras por lado (0,8 km)' },
+                { k: 'Cuadrante (1 ruta, ≤50)', v: info.cuadrante?.name ?? '—', s: info.cuadrante ? `${Math.round(info.cuadrante.expStops)} paquetes esperados · ${info.cuadrante.districts.join(' + ')}` : '' },
                 {
-                  k: 'Colmena',
-                  v: info.colmena ? info.colmena.short : 'Sale del HUB',
-                  s: info.colmena ? 'Su bolsa viajará en la minivan de madrugada' : 'Panal cercano al HUB',
+                  k: 'Torre',
+                  v: info.torre ? `♜ ${info.torre.letter} · ${info.torre.short}` : 'Sale del HUB',
+                  s: info.torre ? 'Su bolsa viaja en el camión Torre de madrugada' : 'Cuadrante cercano al HUB (H = directo)',
                 },
               ].map((x, i) => (
                 <div
@@ -171,7 +170,7 @@ function CheckoutInner() {
               ))}
             </div>
             <p className="mt-3 text-xs text-white/70">
-              Asignación instantánea: <b className="text-lima">celda → panal → Colmena</b> es una búsqueda en un diccionario. A las 02:30 no hay nada que decidir.
+              Asignación instantánea: <b className="text-lima">casilla → cuadrante → Torre</b> es una búsqueda en un diccionario. A las 02:30 no hay nada que decidir.
             </p>
           </div>
 

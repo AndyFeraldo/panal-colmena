@@ -69,20 +69,20 @@ export const DISTRICT_GEOJSON = geo as unknown as { type: 'FeatureCollection'; f
 // HUB XD Villa El Salvador [RETO: ~1,9 km del CD; coordenada aproximada]
 export const HUB: LatLng & { name: string } = { name: 'HUB XD Villa El Salvador', lat: -12.225, lng: -76.93 }
 
-export interface ColmenaPoint extends LatLng {
+export interface TorreZone extends LatLng {
   id: string
   name: string
   short: string
 }
 
-// Puntos Colmena candidatos [SUPUESTO] — nombres genéricos, sin tiendas reales
-export const COLMENA_POINTS: ColmenaPoint[] = [
-  { id: 'C-MIR', short: 'Miraflores', name: 'Punto Colmena Miraflores', lat: -12.119, lng: -77.03 },
-  { id: 'C-SIS', short: 'San Isidro', name: 'Punto Colmena San Isidro', lat: -12.096, lng: -77.035 },
-  { id: 'C-SUR', short: 'Surco', name: 'Punto Colmena Surco', lat: -12.13, lng: -76.99 },
-  { id: 'C-PLI', short: 'Pueblo Libre', name: 'Punto Colmena Pueblo Libre', lat: -12.075, lng: -77.055 },
-  { id: 'C-OLI', short: 'Los Olivos', name: 'Punto Colmena Los Olivos', lat: -11.97, lng: -77.07 },
-  { id: 'C-SJL', short: 'SJL', name: 'Punto Colmena SJL', lat: -11.99, lng: -77.005 },
+// Puntos Torre candidatos [SUPUESTO] — nombres genéricos, sin tiendas reales
+export const TORRE_ZONES: TorreZone[] = [
+  { id: 'C-MIR', short: 'Miraflores', name: 'Torre Miraflores', lat: -12.119, lng: -77.03 },
+  { id: 'C-SIS', short: 'San Isidro', name: 'Torre San Isidro', lat: -12.096, lng: -77.035 },
+  { id: 'C-SUR', short: 'Surco', name: 'Torre Surco', lat: -12.13, lng: -76.99 },
+  { id: 'C-PLI', short: 'Pueblo Libre', name: 'Torre Pueblo Libre', lat: -12.075, lng: -77.055 },
+  { id: 'C-OLI', short: 'Los Olivos', name: 'Torre Los Olivos', lat: -11.97, lng: -77.07 },
+  { id: 'C-SJL', short: 'SJL', name: 'Torre SJL', lat: -11.99, lng: -77.005 },
 ]
 
 // Ana: cliente de la historia (Miraflores, compra audífonos el jueves 21:00)

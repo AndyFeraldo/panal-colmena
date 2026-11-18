@@ -1,35 +1,36 @@
 import { haversineKm } from './geo'
-import { borderNeighbors, cellCenter } from './panales'
+import { borderNeighbors, cellCenter } from './cuadrantes'
 import type { Params } from './params'
-import type { CellMove, LearningItem, PanalMap, ScenarioResult } from './types'
+import type { CellMove, LearningItem, Tablero, ScenarioResult } from './types'
 
 /**
- * "El panal aprende": con los tiempos reales por parada (webhooks de entrega), propone ajustes
- * medibles para la próxima semana. Devuelve la lista y el mapa celda→panal resultante.
+ * "El cuadrante aprende": con los tiempos reales por parada (webhooks de entrega), propone ajustes
+ * medibles para la próxima semana. Devuelve la lista y el mapa casilla→cuadrante resultante.
  */
 export function learnFromDay(
   result: ScenarioResult,
-  map: PanalMap,
+  map: Tablero,
   moves: CellMove[],
   p: Params,
 ): { items: LearningItem[]; mapAfter: Record<string, string> } {
-  const after = { ...map.cellToPanal }
+  const after = { ...map.cellToCuad }
   const stats = new Map<string, { stops: number; service: number }>()
   for (const r of result.routes) {
-    if (!r.panalId) continue
-    const s = stats.get(r.panalId) ?? { stops: 0, service: 0 }
+    if (!r.cuadId) continue
+    const s = stats.get(r.cuadId) ?? { stops: 0, service: 0 }
     for (const st of r.stops) if (st.kind === 'delivery') {
       s.stops++
       s.service += st.serviceMin
     }
-    stats.set(r.panalId, s)
+    stats.set(r.cuadId, s)
   }
-  const panalById = new Map(map.panales.map((pn) => [pn.id, pn]))
+  const cuadById = new Map(map.cuadrantes.map((pn) => [pn.id, pn]))
+  const nm = (id: string) => cuadById.get(id)?.name ?? id
   const touched = new Set<string>()
   const items: (LearningItem & { score: number })[] = []
 
   const cedeCell = (fromId: string, prefer: 'smallest' | 'any'): { cell: string; to: string } | null => {
-    const pn = panalById.get(fromId)
+    const pn = cuadById.get(fromId)
     if (!pn) return null
     const border = pn.cells
       .filter((c) => after[c] === fromId)
@@ -48,7 +49,7 @@ export function learnFromDay(
     return null
   }
 
-  // 1) Panales lentos (min/parada real > 120% del supuesto)
+  // 1) Cuadrantes lentos (min/parada real > 120% del supuesto)
   for (const [id, s] of stats) {
     const avg = s.service / Math.max(1, s.stops)
     if (avg > p.minPerStop * 1.15 && !touched.has(id)) {
@@ -58,42 +59,42 @@ export function learnFromDay(
       touched.add(id)
       touched.add(mv.to)
       items.push({
-        panalId: id,
+        cuadId: id,
         kind: 'slow',
         metric: `${avg.toFixed(1)} min/parada`,
-        message: `${id} promedió ${avg.toFixed(1).replace('.', ',')} min/parada (lento vs ${String(p.minPerStop).replace('.', ',')} supuesto) → ceder 1 celda a ${mv.to}`,
+        message: `${nm(id)} promedió ${avg.toFixed(1).replace('.', ',')} min/parada (lento vs ${String(p.minPerStop).replace('.', ',')} supuesto) → ceder 1 casilla a ${nm(mv.to)}`,
         cell: mv.cell,
         to: mv.to,
         score: avg / p.minPerStop,
       })
     }
   }
-  // 2) Desbordes repetidos → mover la celda de forma permanente
+  // 2) Desbordes repetidos → mover la casilla de forma permanente
   for (const m of moves) {
     if (touched.has(m.from) || touched.has(m.to)) continue
     after[m.cell] = m.to
     touched.add(m.from)
     touched.add(m.to)
     items.push({
-      panalId: m.from,
+      cuadId: m.from,
       kind: 'overflow',
       metric: `+${m.orders} pedidos`,
-      message: `${m.from} se desbordó esta noche (${m.reason.split('(')[1]?.replace(')', '') ?? ''}) → pasar la celda a ${m.to} de forma permanente`,
+      message: `${nm(m.from)} se desbordó esta noche (${m.reason.split('(')[1]?.replace(')', '') ?? ''}) → pasar la casilla a ${nm(m.to)} de forma permanente`,
       cell: m.cell,
       to: m.to,
       score: 1.2,
     })
   }
-  // 3) Panales chicos → absorber celda del vecino más grande
+  // 3) Cuadrantes chicos → absorber casilla del vecino más grande
   for (const [id, s] of stats) {
-    if (s.stops >= p.panalMinStops || touched.has(id)) continue
-    const pn = panalById.get(id)
+    if (s.stops >= p.cuadMinStops || touched.has(id)) continue
+    const pn = cuadById.get(id)
     if (!pn) continue
     const neigh = new Set<string>()
     for (const c of pn.cells) for (const n of borderNeighbors(c, after)) neigh.add(n)
     const big = [...neigh].filter((x) => !touched.has(x)).sort((a, b) => (stats.get(b)?.stops ?? 0) - (stats.get(a)?.stops ?? 0))[0]
     if (!big) continue
-    const donor = panalById.get(big)!
+    const donor = cuadById.get(big)!
     const cand = donor.cells
       .filter((c) => after[c] === big && borderNeighbors(c, after).includes(id))
       .sort((a, b) => haversineKm(cellCenter(a), pn.centroid) - haversineKm(cellCenter(b), pn.centroid))[0]
@@ -102,13 +103,13 @@ export function learnFromDay(
     touched.add(id)
     touched.add(big)
     items.push({
-      panalId: id,
+      cuadId: id,
       kind: 'small',
       metric: `${s.stops} paradas`,
-      message: `${id} solo tuvo ${s.stops} paradas → recibir 1 celda de ${big} (${stats.get(big)?.stops ?? 0} paradas)`,
+      message: `${nm(id)} solo tuvo ${s.stops} paradas → recibir 1 casilla de ${nm(big)} (${stats.get(big)?.stops ?? 0} paradas)`,
       cell: cand,
       to: id,
-      score: 1 + (p.panalMinStops - s.stops) / p.panalMinStops,
+      score: 1 + (p.cuadMinStops - s.stops) / p.cuadMinStops,
     })
   }
   items.sort((a, b) => b.score - a.score)

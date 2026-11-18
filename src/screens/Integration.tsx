@@ -3,14 +3,15 @@ import { ArrowDown, ArrowLeftRight, ArrowRight, Terminal, Trash2, Zap } from 'lu
 import { NeedResult, ScreenHeader, Tag } from '../components/ui'
 import { routingProvider } from '../integration/MockSimpliRouteProvider'
 import { applyMoves } from '../sim/assign'
+import { orderCuadNames } from '../sim/cuadrantes'
 import { useSim } from '../store/useSim'
 
 const MAPPING = [
-  ['Panal', 'Zona (Zones)', 'Polígono del panal; las visitas llevan la etiqueta del panal'],
+  ['Cuadrante', 'Zona (Zones)', 'Polígono del cuadrante; las visitas llevan la etiqueta del cuadrante'],
   ['Pedido con Pin f.', 'Visita (Visits)', 'latitude, longitude, reference, load (dm³), tags'],
-  ['Orden de paradas', 'Optimización / Planes', 'SimpliRoute ordena dentro de cada panal (no cambia)'],
-  ['Colmena', 'Vehículo + punto de inicio', 'La ruta parte del depot de la Colmena; la recarga es una 2.ª ruta'],
-  ['Entregas reales', 'Webhooks → PANAL', 'Tiempos por parada para ajustar panales cada semana'],
+  ['Orden de paradas', 'Optimización / Planes', 'SimpliRoute ordena dentro de cada cuadrante (no cambia)'],
+  ['Torre (A, B, C…)', 'Vehículo + punto de inicio', 'Las rutas A1, A2… parten del depot de la Torre A; reabastecer = 2.ª ruta del día'],
+  ['Entregas reales', 'Webhooks → Tablero f.', 'Tiempos por parada para ajustar cuadrantes cada semana'],
 ]
 
 export default function Integration() {
@@ -30,9 +31,9 @@ function IntegrationInner() {
 
   const simulateNight = async () => {
     const src = 'P8 · Integración'
-    const e1 = await routingProvider.publishZones(result.map.panales, src)
-    const e2 = await routingProvider.publishVehicles(result.colmenas, src)
-    const e3 = await routingProvider.sendVisits(result.orders, applyMoves(result.assignment, result.assignment.moves).orderPanal, src)
+    const e1 = await routingProvider.publishZones(result.map.cuadrantes, src)
+    const e2 = await routingProvider.publishVehicles(result.torres, src)
+    const e3 = await routingProvider.sendVisits(result.orders, orderCuadNames(applyMoves(result.assignment, result.assignment.moves).orderCuad, result.map), src)
     const e4 = await routingProvider.optimize(result.scenarios.C.routes, src)
     const e5 = await routingProvider.registerWebhook(src)
     log([...e5, ...e4, ...e3, ...e2, ...e1])
@@ -40,8 +41,8 @@ function IntegrationInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="P8 · Integración" title="No es una app nueva: es PANAL conectado a lo que Falabella ya usa">
-        PANAL se integra con la API pública de SimpliRoute. El motorizado sigue con su app de siempre y el cliente con sus mensajes de siempre.
+      <ScreenHeader kicker="P8 · Integración" title="No es una app nueva: es el Tablero f. conectado a lo que Falabella ya usa">
+        El Tablero f. se integra con la API pública de SimpliRoute. El motorizado sigue con su app de siempre y el cliente con sus mensajes de siempre.
       </ScreenHeader>
 
       {/* Diagrama */}
@@ -55,10 +56,10 @@ function IntegrationInner() {
           <ArrowRight className="mx-auto hidden text-bosque lg:block" />
           <ArrowDown className="mx-auto text-bosque lg:hidden" />
           <div className="rounded-2xl bg-bosque p-4 text-white">
-            <div className="text-center font-extrabold text-lima">PANAL (lo nuevo)</div>
+            <div className="text-center font-extrabold text-lima">♜ Tablero f. (lo nuevo)</div>
             <div className="text-center text-[11px] text-white/70">motor + panel web (no es app)</div>
             <div className="mt-3 grid grid-cols-2 gap-1.5 text-center text-[11px] font-semibold">
-              {['⬡ Arma panales', '🚐 Asigna Colmena', '⏰ Ventana 2 h', '📊 Aprende'].map((x) => (
+              {['◆ Cuadrantes ≤50', '♜ Asigna Torre', '⏰ Ventana 2 h', '📊 Aprende'].map((x) => (
                 <div key={x} className="rounded-lg bg-white/10 px-2 py-1.5">
                   {x}
                 </div>
@@ -71,7 +72,7 @@ function IntegrationInner() {
             <div className="text-center font-extrabold text-[#2f4fb5]">SimpliRoute (lo que ya usan)</div>
             <div className="text-center text-[11px] text-gris">API pública · licencia SaaS de Falabella</div>
             <div className="mt-3 grid grid-cols-2 gap-1.5 text-center text-[11px] font-semibold text-[#2f4fb5]">
-              {['Zonas = panales', 'Visitas = pedidos', 'Optimización = orden', 'Webhooks = avisos'].map((x) => (
+              {['Zonas = cuadrantes', 'Visitas = pedidos', 'Optimización = orden', 'Webhooks = avisos'].map((x) => (
                 <div key={x} className="rounded-lg bg-[#eef2fd] px-2 py-1.5">
                   {x}
                 </div>
@@ -81,7 +82,7 @@ function IntegrationInner() {
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl bg-turq p-3 text-center text-sm font-bold text-white">
-            🚐 COLMENA (minivan del proveedor)
+            ♜ Torre (camión del proveedor)
             <div className="text-[11px] font-normal text-white/80">en SimpliRoute = un vehículo + un punto de inicio</div>
           </div>
           <div className="rounded-xl border-2 border-[#5b7fd6] p-3 text-center text-sm font-bold text-[#2f4fb5]">
@@ -98,7 +99,7 @@ function IntegrationInner() {
       <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1.3fr]">
         <div className="space-y-4">
           <div className="card overflow-x-auto p-4">
-            <h3 className="font-extrabold text-bosque">Mapeo PANAL → SimpliRoute</h3>
+            <h3 className="font-extrabold text-bosque">Mapeo TORRE f. → SimpliRoute</h3>
             <table className="mt-2 w-full text-sm">
               <tbody>
                 {MAPPING.map(([a, b, c]) => (
@@ -154,7 +155,7 @@ function IntegrationInner() {
           <div className="max-h-[560px] overflow-y-auto font-mono text-xs">
             {apiLog.length === 0 && (
               <div className="p-6 text-center text-white/60">
-                Aún no hay llamadas. Publica panales desde el <b>Planificador</b>, envía visitas desde el <b>HUB</b> o presiona "Simular día completo".
+                Aún no hay llamadas. Publica cuadrantes desde el <b>Planificador</b>, envía visitas desde el <b>HUB</b> o presiona "Simular día completo".
               </div>
             )}
             {apiLog.map((e) => (

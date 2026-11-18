@@ -20,8 +20,21 @@ const TAG_TEXT: Record<string, string> = {
   SUPUESTO: 'Supuesto del equipo',
   DISEÑO: 'Diseño',
   SIMULADO: 'Simulado con supuestos',
-  NUEVO: 'Nuevo con PANAL',
+  NUEVO: 'Nuevo con TORRE f.',
   EXISTE: 'Ya existe',
+}
+
+/** Marca TORRE f.: la pieza Torre con la "f." (sin mascota) */
+export function TorreLogo({ className = 'h-10', fill = '#C6D420', text = '#12301F', bg }: { className?: string; fill?: string; text?: string; bg?: string }) {
+  return (
+    <svg viewBox="0 0 40 50" className={className} role="img" aria-label="Torre f.">
+      {bg && <rect x="-6" y="-2" width="52" height="54" rx="10" fill={bg} />}
+      <path fill={fill} d="M7 3h6v5h4V3h6v5h4V3h6v11l-4 4v16l6 7v5H5v-5l6-7V18l-4-4z" />
+      <text x="20" y="35" textAnchor="middle" fontFamily="Poppins" fontWeight={800} fontSize={12} fill={text}>
+        f.
+      </text>
+    </svg>
+  )
 }
 
 export function Tag({ kind, children }: { kind: keyof typeof TAG_STYLE; children?: ReactNode }) {
@@ -97,9 +110,9 @@ export function NeedResult({ children }: { children: ReactNode }) {
   if (!result)
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3 text-gris">
-        <img src={`${BASE}brand/abella.svg`} alt="" className="anim-buzz h-20" />
+        <TorreLogo className="anim-float h-20" />
         <div className="flex items-center gap-2 text-sm font-semibold">
-          <Loader2 className="animate-spin" size={16} /> Abella está armando los panales…
+          <Loader2 className="animate-spin" size={16} /> Armando el tablero y ubicando las Torres…
         </div>
       </div>
     )

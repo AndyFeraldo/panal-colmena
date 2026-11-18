@@ -1,15 +1,15 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { ArrowRight, Clock, MapPinOff, ListOrdered, Play, Users, BarChart3 } from 'lucide-react'
-import { BASE, Tag, fmtInt, fmtPct } from '../components/ui'
+import { Tag, TorreLogo, fmtInt, fmtPct } from '../components/ui'
 import { useSim } from '../store/useSim'
 import { demoSteps } from '../components/demoSteps'
 
 const PIECES = [
   { icon: '📍', name: 'Pin f.', who: 'falabella.com', desc: 'El pedido nace con lat/long', tone: 'bg-white', tag: 'NUEVO' as const },
-  { icon: '⬡', name: 'PANAL', who: 'motor + panel web', desc: 'Celda → panal → Colmena al instante', tone: 'bg-bosque text-white', tag: 'NUEVO' as const },
+  { icon: '♟️', name: 'Tablero f.', who: 'motor + panel web', desc: 'Casilla → cuadrante (≤50) → Torre al instante', tone: 'bg-bosque text-white', tag: 'NUEVO' as const },
   { icon: '🔗', name: 'SimpliRoute', who: 'lo que ya usan', desc: 'Zonas, visitas y orden de paradas', tone: 'bg-white ring-2 ring-[#5b7fd6]', tag: 'EXISTE' as const },
-  { icon: '🚐', name: 'COLMENA', who: 'minivan del proveedor', desc: 'Mini-almacén móvil cerca de los panales', tone: 'bg-turq text-white', tag: 'NUEVO' as const },
-  { icon: '🛵', name: 'Motorizado', who: 'app de siempre', desc: 'Empieza y recarga en la Colmena', tone: 'bg-white', tag: 'EXISTE' as const },
+  { icon: '♜', name: 'Torre', who: 'camión del proveedor', desc: 'Se estaciona en el punto medio de sus cuadrantes y reabastece', tone: 'bg-turq text-white', tag: 'NUEVO' as const },
+  { icon: '🛵', name: 'Motorizado', who: 'app de siempre', desc: 'Sin paquetes → va a su Torre, no al almacén', tone: 'bg-white', tag: 'EXISTE' as const },
   { icon: '💬', name: 'Cliente', who: 'mensajes de siempre', desc: '+ ventana de 2 horas', tone: 'bg-lima text-bosque', tag: 'NUEVO' as const },
 ]
 
@@ -27,18 +27,19 @@ export default function Home() {
   return (
     <div className="space-y-6">
       {/* HERO */}
-      <section className="card-dark hexbg relative overflow-hidden p-6 md:p-10">
-        <div className="relative z-10 max-w-3xl">
+      <section className="card-dark boardbg relative overflow-hidden p-6 md:p-10">
+        <div className="relative z-10 max-w-3xl lg:max-w-[62%]">
           <span className="chip bg-lima text-bosque">INNOVATHON ULIMA × FALABELLA 2026 · SIMULADOR</span>
           <h1 className="mt-4 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl">
-            PANAL <span className="text-lima">f.</span> + <span className="text-[#5fd0dc]">COLMENA</span>
+            TORRE <span className="text-lima">f.</span>
           </h1>
           <p className="mt-4 text-lg font-semibold text-white md:text-2xl">
-            Se ordena de <span className="text-lima">día</span>, se ejecuta de <span className="text-[#5fd0dc]">noche</span>.
+            Cada pedido tiene su <span className="text-lima">casilla</span>. Cada moto tiene su <span className="text-[#5fd0dc]">Torre</span>.
           </p>
           <p className="mt-2 max-w-2xl text-sm text-white/80 md:text-base">
-            <b className="text-lima">PANAL</b> decide qué pedidos van juntos desde que se compran; la <b className="text-[#5fd0dc]">COLMENA</b> hace que lleguen a
-            tiempo, sin volver a Villa El Salvador. Todo conectado a SimpliRoute, el software que Falabella ya usa.
+            Lima se vuelve un <b className="text-lima">tablero</b>: casillas de ~8 cuadras que se juntan en <b className="text-lima">cuadrantes de máximo 50 paquetes</b>{' '}
+            (una ruta). Cada pedido sabe su cuadrante desde que se compra. La <b className="text-[#5fd0dc]">Torre</b>, un camión estacionado en el punto medio de sus
+            cuadrantes, reabastece a las motos para que no vuelvan a Villa El Salvador. Todo conectado a SimpliRoute, el software que Falabella ya usa.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             <Link to="/gerencia" className="btn-lima !px-5 !py-3 !text-base">
@@ -52,7 +53,10 @@ export default function Home() {
             </button>
           </div>
         </div>
-        <img src={`${BASE}brand/abella.svg`} alt="Abella, la abeja repartidora" className="anim-buzz absolute -right-6 bottom-0 hidden w-[340px] opacity-95 md:block" />
+        <div className="absolute right-8 top-1/2 hidden -translate-y-1/2 lg:block xl:right-16" aria-hidden>
+          <TorreLogo className="anim-float mx-auto h-[220px] drop-shadow-2xl xl:h-[260px]" />
+          <div className="mt-2 text-center text-xs font-bold uppercase tracking-widest text-lima/80">Se ordena de día · se ejecuta de noche</div>
+        </div>
       </section>
 
       {/* PROBLEMA */}
@@ -102,7 +106,7 @@ export default function Home() {
       <section>
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-xl font-extrabold text-bosque">Cómo encajan las piezas</h2>
-          <span className="text-xs text-gris">Solo 2 piezas nuevas de software (Pin f. y PANAL). Lo demás ya existe y se reutiliza.</span>
+          <span className="text-xs text-gris">Solo 2 piezas nuevas de software (Pin f. y Tablero f.). Lo demás ya existe y se reutiliza.</span>
         </div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
           {PIECES.map((p, i) => (

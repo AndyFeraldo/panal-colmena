@@ -1,31 +1,16 @@
-import { cellToLatLng, getHexagonAreaAvg, gridDisk } from 'h3-js'
-import { HUB, type LatLng } from './data'
+import { HUB } from './data'
 import { haversineKm } from './geo'
-import { H3_RES } from './orders'
+import { CELL_AREA_KM2, cellCenter, neighbors } from './grid'
 import { avgVolume, type DemandLevel, type Params } from './params'
-import type { Panal, PanalMap } from './types'
+import type { Cuadrante, Tablero } from './types'
 
-export const PANAL_COLORS = 7
-const CELL_AREA_KM2 = getHexagonAreaAvg(H3_RES, 'km2')
+export { cellCenter, neighbors }
+
+export const CUAD_COLORS = 7
 const SHIFT_MINUTES = 300
-const TIME_BUFFER = 60 // margen para ir/volver y recargar
+const TIME_BUFFER = 60 // margen para ir/volver y reabastecer
 
-const cellCenterCache = new Map<string, LatLng>()
-export function cellCenter(cell: string): LatLng {
-  let c = cellCenterCache.get(cell)
-  if (!c) {
-    const [lat, lng] = cellToLatLng(cell)
-    c = { lat, lng }
-    cellCenterCache.set(cell, c)
-  }
-  return c
-}
-
-export function neighbors(cell: string): string[] {
-  return gridDisk(cell, 1).filter((c) => c !== cell)
-}
-
-/** Tiempo estimado del panal: paradas × tiempo por parada + recorrido aproximado (fórmula de Beardwood para TSP) */
+/** Tiempo estimado del cuadrante: paradas × tiempo por parada + recorrido aproximado (fórmula de Beardwood para TSP) */
 export function estimateMinutes(stops: number, cells: number, p: Params): number {
   const area = Math.max(1, cells) * CELL_AREA_KM2
   const intraKm = 0.75 * Math.sqrt(Math.max(1, stops) * area) * p.detourFactor
@@ -40,17 +25,17 @@ interface Group {
 }
 
 /**
- * Construye panales por crecimiento de regiones contiguas sobre celdas H3 res 8.
- * Semilla: celda libre más al sur-oeste; se agrega el vecino más cercano al centroide hasta ~48 paradas
- * sin pasar los límites de paradas, volumen y tiempo del turno.
+ * Arma los cuadrantes por crecimiento de regiones contiguas sobre las casillas del tablero.
+ * Semilla: casilla libre más al sur-oeste; se agrega la vecina más cercana al centro del grupo hasta ~45 paquetes
+ * sin pasar el tope de 50 paquetes, el volumen de la mochila ni el tiempo del turno.
  */
-export function buildPanales(
+export function buildCuadrantes(
   cellDemand: Record<string, number>,
   cellDistrict: Record<string, string>,
   p: Params,
   level: DemandLevel,
   weekday: number,
-): PanalMap {
+): Tablero {
   const vol = avgVolume(p, level === 'Cyber')
   const maxVolume = p.backpackDm3 * 2
   const maxMinutes = SHIFT_MINUTES - TIME_BUFFER
@@ -59,7 +44,7 @@ export function buildPanales(
   const sorted = [...cells].sort((a, b) => {
     const ca = cellCenter(a)
     const cb = cellCenter(b)
-    return ca.lat + ca.lng - (cb.lat + cb.lng)
+    return ca.lat + ca.lng - (cb.lat + cb.lng) || (a < b ? -1 : 1)
   })
   const owner = new Map<string, number>()
   const groups: Group[] = []
@@ -77,8 +62,8 @@ export function buildPanales(
       for (const n of neighbors(c)) if (inDemand.has(n) && !owner.has(n) && !rejected.has(n)) frontier.add(n)
     }
     addFrontier(seed)
-    while (g.stops < p.panalTargetStops && frontier.size > 0) {
-      // vecino más cercano al centroide del grupo
+    while (g.stops < p.cuadTargetStops && frontier.size > 0) {
+      // casilla vecina más cercana al centro del grupo
       let best = ''
       let bd = Infinity
       for (const c of frontier) {
@@ -92,7 +77,7 @@ export function buildPanales(
       frontier.delete(best)
       const ns = g.stops + cellDemand[best]
       const fits =
-        ns <= p.panalMaxStops &&
+        ns <= p.cuadMaxStops &&
         ns * vol <= maxVolume &&
         estimateMinutes(ns, g.cells.length + 1, p) <= maxMinutes
       if (!fits) {
@@ -110,11 +95,11 @@ export function buildPanales(
     }
   }
 
-  // Fusionar panales pequeños con el vecino más chico si no supera el máximo de fusión
+  // Unir cuadrantes chicos con el vecino más chico si juntos no pasan el tope
   let merged = true
   while (merged) {
     merged = false
-    const alive = groups.map((g, i) => ({ g, i })).filter((x) => x.g.cells.length > 0 && x.g.stops < p.panalMinStops)
+    const alive = groups.map((g, i) => ({ g, i })).filter((x) => x.g.cells.length > 0 && x.g.stops < p.cuadMinStops)
     alive.sort((a, b) => a.g.stops - b.g.stops)
     for (const { g, i } of alive) {
       if (g.cells.length === 0) continue
@@ -129,7 +114,7 @@ export function buildPanales(
         const s = groups[o].stops
         const total = s + g.stops
         if (
-          total <= p.panalMergeMax &&
+          total <= p.cuadMergeMax &&
           total * vol <= maxVolume * 1.15 &&
           estimateMinutes(total, groups[o].cells.length + g.cells.length, p) <= SHIFT_MINUTES - 20 &&
           s < ts
@@ -155,17 +140,17 @@ export function buildPanales(
   }
 
   const finalGroups = groups.filter((g) => g.cells.length > 0)
-  const cellToPanal: Record<string, string> = {}
-  const panales: Panal[] = finalGroups.map((g, i) => {
-    const id = `P-${String(i + 1).padStart(2, '0')}`
-    for (const c of g.cells) cellToPanal[c] = id
-    return makePanal(id, g.cells, cellDemand, cellDistrict, p, vol, 0)
+  const cellToCuad: Record<string, string> = {}
+  const cuadrantes: Cuadrante[] = finalGroups.map((g, i) => {
+    const id = `Q-${String(i + 1).padStart(3, '0')}`
+    for (const c of g.cells) cellToCuad[c] = id
+    return makeCuadrante(id, g.cells, cellDemand, cellDistrict, p, vol, 0)
   })
-  colorPanales(panales, cellToPanal)
-  return { level, weekday, panales, cellToPanal, cellDemand, cellDistrict }
+  colorCuadrantes(cuadrantes, cellToCuad)
+  return { level, weekday, cuadrantes, cellToCuad, cellDemand, cellDistrict }
 }
 
-export function makePanal(
+export function makeCuadrante(
   id: string,
   cells: string[],
   cellDemand: Record<string, number>,
@@ -173,7 +158,8 @@ export function makePanal(
   p: Params,
   vol: number,
   color: number,
-): Panal {
+  name = id,
+): Cuadrante {
   const stops = cells.reduce((s, c) => s + (cellDemand[c] ?? 0), 0)
   let lat = 0
   let lng = 0
@@ -189,6 +175,7 @@ export function makePanal(
   const districts = [...new Set(cells.map((c) => cellDistrict[c]).filter(Boolean))]
   return {
     id,
+    name,
     cells,
     color,
     centroid,
@@ -197,72 +184,86 @@ export function makePanal(
     estMinutes: estimateMinutes(stops, cells.length, p),
     districts,
     distHubKm: haversineKm(centroid, HUB),
-    colmenaId: null,
+    torreId: null,
   }
 }
 
-/** Coloreo greedy: dos panales vecinos nunca comparten color */
-export function colorPanales(panales: Panal[], cellToPanal: Record<string, string>) {
-  const adj = panalAdjacency(panales, cellToPanal)
-  const order = [...panales].sort((a, b) => (adj.get(b.id)?.size ?? 0) - (adj.get(a.id)?.size ?? 0))
+/** Coloreo greedy: dos cuadrantes vecinos nunca comparten color */
+export function colorCuadrantes(cuadrantes: Cuadrante[], cellToCuad: Record<string, string>) {
+  const adj = cuadAdjacency(cuadrantes, cellToCuad)
+  const order = [...cuadrantes].sort((a, b) => (adj.get(b.id)?.size ?? 0) - (adj.get(a.id)?.size ?? 0))
   const colorOf = new Map<string, number>()
-  const usage = new Array(PANAL_COLORS).fill(0)
-  for (const pn of order) {
+  const usage = new Array(CUAD_COLORS).fill(0)
+  for (const q of order) {
     const used = new Set<number>()
-    for (const n of adj.get(pn.id) ?? []) {
+    for (const n of adj.get(q.id) ?? []) {
       const c = colorOf.get(n)
       if (c !== undefined) used.add(c)
     }
     let best = -1
-    for (let c = 0; c < PANAL_COLORS; c++) {
+    for (let c = 0; c < CUAD_COLORS; c++) {
       if (!used.has(c) && (best < 0 || usage[c] < usage[best])) best = c
     }
     if (best < 0) best = usage.indexOf(Math.min(...usage))
-    colorOf.set(pn.id, best)
+    colorOf.set(q.id, best)
     usage[best]++
   }
-  for (const pn of panales) pn.color = colorOf.get(pn.id) ?? 0
+  for (const q of cuadrantes) q.color = colorOf.get(q.id) ?? 0
 }
 
-export function panalAdjacency(panales: Panal[], cellToPanal: Record<string, string>): Map<string, Set<string>> {
+export function cuadAdjacency(cuadrantes: Cuadrante[], cellToCuad: Record<string, string>): Map<string, Set<string>> {
   const adj = new Map<string, Set<string>>()
-  for (const pn of panales) {
+  for (const q of cuadrantes) {
     const s = new Set<string>()
-    for (const c of pn.cells) for (const n of neighbors(c)) {
-      const o = cellToPanal[n]
-      if (o && o !== pn.id) s.add(o)
+    for (const c of q.cells) for (const n of neighbors(c)) {
+      const o = cellToCuad[n]
+      if (o && o !== q.id) s.add(o)
     }
-    adj.set(pn.id, s)
+    adj.set(q.id, s)
   }
   return adj
 }
 
-/** Aplica movimientos de celdas (ajustes manuales del planificador) y recalcula los panales */
-export function applyCellOverrides(map: PanalMap, overrides: Record<string, string>, p: Params): PanalMap {
-  const entries = Object.entries(overrides).filter(([c, to]) => map.cellToPanal[c] && map.panales.some((x) => x.id === to))
+/** Aplica movimientos de casillas (ajustes manuales del planificador) y recalcula los cuadrantes */
+export function applyCellOverrides(map: Tablero, overrides: Record<string, string>, p: Params): Tablero {
+  const entries = Object.entries(overrides).filter(([c, to]) => map.cellToCuad[c] && map.cuadrantes.some((x) => x.id === to))
   if (entries.length === 0) return map
-  const cellToPanal = { ...map.cellToPanal }
-  for (const [c, to] of entries) cellToPanal[c] = to
+  const cellToCuad = { ...map.cellToCuad }
+  for (const [c, to] of entries) cellToCuad[c] = to
   const vol = avgVolume(p, map.level === 'Cyber')
-  const byPanal = new Map<string, string[]>()
-  for (const [c, id] of Object.entries(cellToPanal)) {
-    const arr = byPanal.get(id) ?? []
+  const byCuad = new Map<string, string[]>()
+  for (const [c, id] of Object.entries(cellToCuad)) {
+    const arr = byCuad.get(id) ?? []
     arr.push(c)
-    byPanal.set(id, arr)
+    byCuad.set(id, arr)
   }
-  const panales = map.panales
-    .filter((pn) => (byPanal.get(pn.id)?.length ?? 0) > 0)
-    .map((pn) => makePanal(pn.id, byPanal.get(pn.id)!, map.cellDemand, map.cellDistrict, p, vol, pn.color))
-  return { ...map, panales, cellToPanal }
+  const cuadrantes = map.cuadrantes
+    .filter((q) => (byCuad.get(q.id)?.length ?? 0) > 0)
+    .map((q) => makeCuadrante(q.id, byCuad.get(q.id)!, map.cellDemand, map.cellDistrict, p, vol, q.color))
+  return { ...map, cuadrantes, cellToCuad }
 }
 
-/** ¿La celda está en el borde de su panal? Devuelve los panales vecinos */
-export function borderNeighbors(cell: string, cellToPanal: Record<string, string>): string[] {
-  const own = cellToPanal[cell]
+/** ¿La casilla está en el borde de su cuadrante? Devuelve los cuadrantes vecinos */
+export function borderNeighbors(cell: string, cellToCuad: Record<string, string>): string[] {
+  const own = cellToCuad[cell]
   const out = new Set<string>()
   for (const n of neighbors(cell)) {
-    const o = cellToPanal[n]
+    const o = cellToCuad[n]
     if (o && o !== own) out.add(o)
   }
   return [...out]
+}
+
+/** Nombre visible de un cuadrante a partir de su id interno */
+export function cuadName(map: Tablero, id: string | undefined | null): string {
+  if (!id) return '—'
+  return map.cuadrantes.find((q) => q.id === id)?.name ?? id
+}
+
+/** pedido → nombre visible del cuadrante (para etiquetas en SimpliRoute) */
+export function orderCuadNames(orderCuad: Record<string, string>, map: Tablero): Record<string, string> {
+  const name = new Map(map.cuadrantes.map((q) => [q.id, q.name]))
+  const out: Record<string, string> = {}
+  for (const k in orderCuad) out[k] = name.get(orderCuad[k]) ?? orderCuad[k]
+  return out
 }

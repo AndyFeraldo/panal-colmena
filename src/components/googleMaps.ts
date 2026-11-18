@@ -29,7 +29,7 @@ let loading: Promise<boolean> | null = null
 declare global {
   interface Window {
     gm_authFailure?: () => void
-    __panalGoogleReady?: () => void
+    __cuadranteGoogleReady?: () => void
   }
 }
 
@@ -47,13 +47,13 @@ export function loadGoogleMaps(): Promise<boolean> {
     // Google llama a esta función si la clave es inválida o el sitio no está autorizado
     window.gm_authFailure = () => fail('Google rechazó la clave (revisa restricciones y facturación)')
     const timeout = setTimeout(() => fail('Google Maps no respondió a tiempo'), 12000)
-    window.__panalGoogleReady = () => {
+    window.__cuadranteGoogleReady = () => {
       clearTimeout(timeout)
       set({ status: 'ready', reason: null })
       resolve(true)
     }
     const s = document.createElement('script')
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_KEY)}&loading=async&language=es&region=PE&callback=__panalGoogleReady`
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(GOOGLE_KEY)}&loading=async&language=es&region=PE&callback=__cuadranteGoogleReady`
     s.async = true
     s.onerror = () => {
       clearTimeout(timeout)
@@ -64,7 +64,7 @@ export function loadGoogleMaps(): Promise<boolean> {
   return loading
 }
 
-/** Estilo limpio: sin puntos de interés ni transporte, para que resalten los panales */
+/** Estilo limpio: sin puntos de interés ni transporte, para que resalten los cuadrantes */
 export const CLEAN_STYLE: google.maps.MapTypeStyle[] = [
   { featureType: 'poi', stylers: [{ visibility: 'off' }] },
   { featureType: 'transit', stylers: [{ visibility: 'off' }] },

@@ -1,11 +1,10 @@
-import { latLngToCell } from 'h3-js'
+import { latLngToCell } from './grid'
 import { ANA, DISTRICTS, STREETS, type District, type LatLng } from './data'
 import { pointInDistrict } from './geo'
 import { SIZE_KEYS, avgVolume, type DemandLevel, type Params } from './params'
 import { cumulative, makeRng, normal, pickCumulative, type Rng } from './rng'
 import type { Order } from './types'
 
-export const H3_RES = 8
 
 // Curva de ventas del día anterior (00h..23h): baja de madrugada, cae en el almuerzo, sube fuerte 17:00–24:00 [ENTREVISTA]
 const SALES_CURVE = [1, 0.6, 0.4, 0.3, 0.3, 0.4, 0.8, 1.5, 2.5, 3.2, 3.5, 3.4, 2.6, 2.3, 2.8, 3.3, 3.8, 5, 6.5, 7.5, 8.2, 8.5, 7.8, 6]
@@ -87,13 +86,13 @@ export function generateOrders(p: Params, level: DemandLevel, weekday: number): 
 }
 
 export interface History {
-  share: Record<string, number> // fracción de la demanda diaria que cae en cada celda
+  share: Record<string, number> // fracción de la demanda diaria que cae en cada casilla
   cellDistrict: Record<string, string>
   weeks: number
   samples: number
 }
 
-/** Historial sintético de 8 semanas → demanda relativa por celda H3 y distrito dominante de cada celda */
+/** Historial sintético de 8 semanas → demanda relativa por casilla H3 y distrito dominante de cada casilla */
 export function buildHistory(p: Params, weeks = 8, perDay = 4000): History {
   const rng = makeRng(p.seed, 'history')
   const counts: Record<string, number> = {}
@@ -102,7 +101,7 @@ export function buildHistory(p: Params, weeks = 8, perDay = 4000): History {
   for (let i = 0; i < samples; i++) {
     const d = DISTRICTS[pickCumulative(rng, DISTRICT_CUM)]
     const pt = samplePoint(rng, d)
-    const cell = latLngToCell(pt.lat, pt.lng, H3_RES)
+    const cell = latLngToCell(pt.lat, pt.lng)
     counts[cell] = (counts[cell] ?? 0) + 1
     const dc = (distCounts[cell] ??= {})
     dc[d.name] = (dc[d.name] ?? 0) + 1

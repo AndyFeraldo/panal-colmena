@@ -60,8 +60,9 @@ body {
 .h-title {
   @apply text-2xl font-extrabold tracking-tight text-bosque md:text-3xl;
 }
-.hexbg {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath d='M28 66L0 50V16L28 0l28 16v34L28 66zm0 32L0 82V66l28-16 28 16v16L28 98z' fill='none' stroke='%23C6D420' stroke-opacity='.18' stroke-width='1.5'/%3E%3C/svg%3E");
+.boardbg {
+  /* tablero de ajedrez sutil (casillas en rombo) */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cpath d='M32 0L64 32 32 64 0 32z' fill='%23C6D420' fill-opacity='.07'/%3E%3Cpath d='M32 0L64 32 32 64 0 32z' fill='none' stroke='%23C6D420' stroke-opacity='.16' stroke-width='1'/%3E%3C/svg%3E");
 }
 
 .leaflet-container {
@@ -71,7 +72,7 @@ body {
   background: #eef0e6;
 }
 .osm-tiles {
-  /* aspecto limpio tipo "Google Maps": menos saturación para que resalten los panales */
+  /* aspecto limpio tipo "Google Maps": menos saturación para que resalten los cuadrantes */
   filter: saturate(0.45) brightness(1.04) contrast(0.95);
 }
 .leaflet-div-icon.clean {
@@ -85,6 +86,19 @@ body {
   text-shadow: 0 0 3px #fff, 0 0 3px #fff;
   text-align: center;
   line-height: 20px;
+}
+.cuad-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #12301f;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff;
+  text-align: center;
+  line-height: 18px;
+  pointer-events: none;
+}
+.cuad-label.on-dark {
+  color: #e9f2c0;
+  text-shadow: 0 0 3px #0b2215, 0 0 3px #0b2215;
 }
 
 @keyframes drop {
@@ -113,20 +127,20 @@ body {
 .anim-pop {
   animation: pop 0.35s ease-out both;
 }
-@keyframes buzz {
+@keyframes float {
   0%,
   100% {
     transform: translateY(0) rotate(0);
   }
   50% {
-    transform: translateY(-6px) rotate(-3deg);
+    transform: translateY(-6px);
   }
 }
-.anim-buzz {
-  animation: buzz 2.6s ease-in-out infinite;
+.anim-float {
+  animation: float 2.6s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {
-  .anim-buzz,
+  .anim-float,
   .anim-drop,
   .anim-pop {
     animation: none;

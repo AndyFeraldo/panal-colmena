@@ -18,9 +18,9 @@ const RETO_FACTS: [string, string][] = [
 const INSIGHTS = [
   'Usan SimpliRoute (licencia SaaS); la app del motorizado es intuitiva → integrarse, no crear app nueva.',
   'Muchas direcciones no tienen coordenadas; se buscan a mano en Google → Pin f.',
-  'Rutas estáticas por orden de llegada; el motorizado conoce su ruta al cargar → PANAL por cercanía.',
-  'Mochila por volumen (tallas XS3, XS2, S, M en dm³); si no entra, el motorizado vuelve → recarga en Colmena.',
-  'Idea de ellos: una minivan que alimente a las motos; "pueden recargar en tiendas" → COLMENA.',
+  'Rutas estáticas por orden de llegada; el motorizado conoce su ruta al cargar → cuadrantes por cercanía (Tablero f.).',
+  'Mochila por volumen (tallas XS3, XS2, S, M en dm³); si no entra, el motorizado vuelve → se reabastece en la Torre.',
+  'Idea de ellos: un camión que alimente a las motos; "pueden recargar en tiendas" → la Torre.',
   'En Cyber las motos salen 8–9 en vez de 7 y no terminan de entregar; los lunes hay picos.',
   'El 60% de las 02:30 viene de la curva de ventas (17:00–24:00) y la promesa es 24 h.',
   'Visibilidad del cliente mala ("de 8 a 8") → ventana de 2 h.',
@@ -116,8 +116,8 @@ export default function Assumptions() {
                 </td>
               </tr>
               <tr className="border-t border-linea">
-                <td className="py-2 font-semibold text-bosque">Resolución H3</td>
-                <td className="py-2 text-xs">8 (~0,74 km² ≈ 7×7 cuadras)</td>
+                <td className="py-2 font-semibold text-bosque">Casilla del tablero</td>
+                <td className="py-2 text-xs">Rombo de 0,8 km por lado (~8 cuadras, 0,64 km²); cuadrante = 1 ruta de máximo 50 paquetes</td>
                 <td className="py-2">
                   <Tag kind="DISEÑO" />
                 </td>
@@ -157,7 +157,7 @@ export default function Assumptions() {
               <li>• Bases y PPT oficiales de la Innovathon Ulima × Saga Falabella 2026.</li>
               <li>• Entrevista grupal con el equipo de Falabella (14/11/2026), anonimizada.</li>
               <li>• Límites de distritos: INEI, vía github.com/juaneladio/peru-geojson (simplificado).</li>
-              <li>• Hexágonos: H3 (h3geo.org). Mapas: © colaboradores de OpenStreetMap.</li>
+              <li>• Casillas en rombo: cuadrícula propia del equipo. Mapas: Google Maps (si hay clave) o © colaboradores de OpenStreetMap.</li>
               <li>• API pública de SimpliRoute: documentation.simpliroute.com/es (integración simulada).</li>
             </ul>
           </div>

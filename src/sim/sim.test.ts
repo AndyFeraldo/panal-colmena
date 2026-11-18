@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { latLngToCell, gridDisk } from 'h3-js'
+import { latLngToCell, neighbors } from './grid'
 import { assignOrders } from './assign'
 import { ANA, DISTRICTS } from './data'
 import { districtOf, haversineKm } from './geo'
-import { generateOrders, H3_RES } from './orders'
-import { panalAdjacency } from './panales'
+import { generateOrders } from './orders'
+import { cuadAdjacency } from './cuadrantes'
 import { DEFAULT_PARAMS } from './params'
 import { sequenceRoute, routeLength } from './routing'
 import { buildMap, runSimulation } from './simulate'
@@ -40,36 +40,36 @@ describe('generador de pedidos', () => {
   })
 })
 
-describe('panales', () => {
-  const { map, colmenas } = buildMap(input)
-  it('cada celda pertenece a un solo panal y los panales respetan el máximo de fusión', () => {
-    const all = map.panales.flatMap((p) => p.cells)
+describe('cuadrantes', () => {
+  const { map, torres } = buildMap(input)
+  it('cada casilla pertenece a un solo cuadrante y los cuadrantes respetan el máximo de fusión', () => {
+    const all = map.cuadrantes.flatMap((p) => p.cells)
     expect(new Set(all).size).toBe(all.length)
-    for (const p of map.panales.filter((x) => x.cells.length > 1)) expect(p.expStops).toBeLessThanOrEqual(DEFAULT_PARAMS.panalMergeMax + 0.001)
+    for (const p of map.cuadrantes.filter((x) => x.cells.length > 1)) expect(p.expStops).toBeLessThanOrEqual(DEFAULT_PARAMS.cuadMergeMax + 0.001)
   })
   it('paradas promedio cerca del objetivo', () => {
-    const avg = map.panales.reduce((s, p) => s + p.expStops, 0) / map.panales.length
+    const avg = map.cuadrantes.reduce((s, p) => s + p.expStops, 0) / map.cuadrantes.length
     expect(avg).toBeGreaterThan(35)
     expect(avg).toBeLessThan(56)
   })
-  it('hay panales que cruzan distritos', () => {
-    expect(map.panales.filter((p) => p.districts.length > 1).length).toBeGreaterThan(5)
+  it('hay cuadrantes que cruzan distritos', () => {
+    expect(map.cuadrantes.filter((p) => p.districts.length > 1).length).toBeGreaterThan(5)
   })
-  it('panales vecinos no comparten color', () => {
-    const adj = panalAdjacency(map.panales, map.cellToPanal)
-    const color = new Map(map.panales.map((p) => [p.id, p.color]))
+  it('cuadrantes vecinos no comparten color', () => {
+    const adj = cuadAdjacency(map.cuadrantes, map.cellToCuad)
+    const color = new Map(map.cuadrantes.map((p) => [p.id, p.color]))
     let clashes = 0
     for (const [id, ns] of adj) for (const n of ns) if (color.get(id) === color.get(n)) clashes++
     expect(clashes).toBe(0)
   })
-  it('los panales son contiguos', () => {
-    for (const p of map.panales.slice(0, 40)) {
+  it('los cuadrantes son contiguos', () => {
+    for (const p of map.cuadrantes.slice(0, 40)) {
       const set = new Set(p.cells)
       const seen = new Set([p.cells[0]])
       const stack = [p.cells[0]]
       while (stack.length) {
         const c = stack.pop()!
-        for (const n of gridDisk(c, 1)) if (set.has(n) && !seen.has(n)) {
+        for (const n of neighbors(c)) if (set.has(n) && !seen.has(n)) {
           seen.add(n)
           stack.push(n)
         }
@@ -77,9 +77,9 @@ describe('panales', () => {
       expect(seen.size).toBe(p.cells.length)
     }
   })
-  it('colmenas no superan la capacidad planificada', () => {
-    for (const c of colmenas) expect(c.expLoad).toBeLessThanOrEqual(DEFAULT_PARAMS.minivanCapacity * c.minivans + 0.001)
-    expect(colmenas.some((c) => c.panalIds.length > 0)).toBe(true)
+  it('torres no superan la capacidad planificada', () => {
+    for (const c of torres) expect(c.expLoad).toBeLessThanOrEqual(DEFAULT_PARAMS.truckCapacity * c.trucks + 0.001)
+    expect(torres.some((c) => c.cuadIds.length > 0)).toBe(true)
   })
 })
 
@@ -89,15 +89,15 @@ describe('asignación nocturna', () => {
     const orders = generateOrders(DEFAULT_PARAMS, 'Normal', 3)
     assignOrders(orders, map, 0.95) // calentamiento
     const a = assignOrders(orders, map, 0.95)
-    expect(Object.keys(a.orderPanal).length).toBe(orders.length)
+    expect(Object.keys(a.orderCuad).length).toBe(orders.length)
     expect(a.timeMs).toBeLessThan(50)
   })
-  it('Ana queda en el panal de su celda', () => {
+  it('Ana queda en el cuadrante de su casilla', () => {
     const { map } = buildMap(input)
     const orders = generateOrders(DEFAULT_PARAMS, 'Normal', 3)
     const a = assignOrders(orders, map, 0.95)
-    const cell = latLngToCell(ANA.lat, ANA.lng, H3_RES)
-    expect(a.orderPanal[ANA.id]).toBe(map.cellToPanal[cell])
+    const cell = latLngToCell(ANA.lat, ANA.lng)
+    expect(a.orderCuad[ANA.id]).toBe(map.cellToCuad[cell])
   })
 })
 
@@ -125,11 +125,33 @@ describe('simulación completa', () => {
   it('baseline: rutas de máximo 50 por distrito', () => {
     for (const x of A.routes) expect(x.deliveries).toBeLessThanOrEqual(50)
   })
-  it('PANAL mejora SPR, km vacíos y proporción de rutas chicas', () => {
+  it('Tablero f. reduce las rutas chicas y la Torre los km vacíos', () => {
     expect(B.kpis.pctRoutesUnder30).toBeLessThan(A.kpis.pctRoutesUnder30)
     expect(C.kpis.emptyKm).toBeLessThan(A.kpis.emptyKm)
   })
-  it('Colmena mejora el OTD y la carga correcta', () => {
+  it('TORRE f.: ninguna ruta pasa de 50 paquetes, incluso en Cyber', () => {
+    for (const x of C.routes) expect(x.deliveries).toBeLessThanOrEqual(50)
+    const cy = runSimulation({ ...input, level: 'Cyber' })
+    for (const x of cy.scenarios.C.routes) expect(x.deliveries).toBeLessThanOrEqual(50)
+  })
+  it('nombres visibles: A1, A2… por Torre y H1, H2… directos del HUB', () => {
+    for (const q of r.map.cuadrantes) {
+      const t = r.torres.find((x) => x.id === q.torreId)
+      if (t) expect(q.name).toMatch(new RegExp(`^${t.letter}\\d+$`))
+      else expect(q.name).toMatch(/^H\d+$/)
+    }
+    expect(new Set(r.map.cuadrantes.map((q) => q.name)).size).toBe(r.map.cuadrantes.length)
+  })
+  it('cada Torre está en el punto medio de sus cuadrantes', () => {
+    for (const t of r.torres.filter((x) => x.cuadIds.length > 0)) {
+      const qs = r.map.cuadrantes.filter((q) => t.cuadIds.includes(q.id))
+      const w = qs.reduce((s, q) => s + q.expStops, 0)
+      const lat = qs.reduce((s, q) => s + q.centroid.lat * q.expStops, 0) / w
+      const lng = qs.reduce((s, q) => s + q.centroid.lng * q.expStops, 0) / w
+      expect(haversineKm(t, { lat, lng })).toBeLessThan(1.5)
+    }
+  })
+  it('Torre mejora el OTD y la carga correcta', () => {
     expect(C.kpis.otd).toBeGreaterThan(A.kpis.otd)
     expect(C.kpis.loadCorrect).toBeGreaterThan(A.kpis.loadCorrect)
   })
@@ -142,9 +164,9 @@ describe('simulación completa', () => {
     const f = (k: typeof A.kpis) => ({
       rutas: k.routes, spr: +k.spr.toFixed(1), chicas: +(k.pctRoutesUnder30 * 100).toFixed(1), kmVacios: Math.round(k.emptyKm),
       otd: +(k.otd * 100).toFixed(1), rutasOk: +(k.pctRoutesOnTime * 100).toFixed(1), carga: +(k.loadCorrect * 100).toFixed(3),
-      recargas: k.reloads, hub: k.vehiclesAtHub, minivans: k.minivans, ms: +k.decisionMs.toFixed(2),
+      recargas: k.reloads, hub: k.vehiclesAtHub, trucks: k.trucks, ms: +k.decisionMs.toFixed(2),
     })
-    console.log('panales', r.map.panales.length, 'colmenas', r.colmenas.map((c) => `${c.short}:${c.panalIds.length}/${Math.round(c.expLoad)}`).join(' '))
+    console.log('cuadrantes', r.map.cuadrantes.length, 'torres', r.torres.map((c) => `${c.short}:${c.cuadIds.length}/${Math.round(c.expLoad)}`).join(' '))
     console.log('A', JSON.stringify(f(A.kpis)))
     console.log('B', JSON.stringify(f(B.kpis)))
     console.log('C', JSON.stringify(f(C.kpis)))

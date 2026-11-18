@@ -5,24 +5,24 @@ import { anaContext } from '../components/demoSteps'
 import { fmtTime } from '../sim/geo'
 import { useSim } from '../store/useSim'
 
-export default function ColmenaScreen() {
+export default function TorreScreen() {
   return (
     <NeedResult>
-      <ColmenaInner />
+      <TorreInner />
     </NeedResult>
   )
 }
 
 type ScanResult = { ok: boolean; text: string } | null
 
-function ColmenaInner() {
+function TorreInner() {
   const result = useSim((s) => s.result)!
   const params = useSim((s) => s.params)
   const ana = anaContext(result)
-  const used = result.colmenas.filter((c) => result.scenarios.C.minivanTrips.some((t) => t.colmenaId === c.id))
-  const [colId, setColId] = useState(ana?.colmena?.id ?? used[0]?.id)
+  const used = result.torres.filter((c) => result.scenarios.C.torreTrips.some((t) => t.torreId === c.id))
+  const [colId, setColId] = useState(ana?.torre?.id ?? used[0]?.id)
   const col = used.find((c) => c.id === colId) ?? used[0]
-  const trip = result.scenarios.C.minivanTrips.find((t) => t.colmenaId === col?.id)
+  const trip = result.scenarios.C.torreTrips.find((t) => t.torreId === col?.id)
   const routes = useMemo(
     () => result.scenarios.C.routes.filter((r) => r.depotId === col?.id).sort((a, b) => a.startTime - b.startTime),
     [result, col],
@@ -31,7 +31,7 @@ function ColmenaInner() {
   const [last, setLast] = useState<ScanResult>(null)
   const [errorsCaught, setErrorsCaught] = useState(0)
 
-  if (!col || !trip) return <div className="card p-6">No hay Colmenas activas en este escenario.</div>
+  if (!col || !trip) return <div className="card p-6">No hay Torres activas en este escenario.</div>
 
   const pending = routes.filter((r) => !scanned[r.id])
   const scanNext = () => {
@@ -50,9 +50,9 @@ function ColmenaInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="P4 · Encargado de la Colmena · 05:30–21:00 · en el celular" title="La Colmena: mini-almacén móvil cerca de los panales">
-        Una minivan del proveedor de transporte sale del HUB con las bolsas de varios panales y se estaciona en un punto fijo. Las motos recogen y recargan aquí, sin
-        volver a Villa El Salvador.
+      <ScreenHeader kicker="P4 · Encargado de la Torre · 05:30–21:00 · en el celular" title="La Torre: el camión que reabastece en el punto medio de sus cuadrantes">
+        Un camión del proveedor de transporte sale del HUB con las bolsas de sus cuadrantes ({col.letter}1, {col.letter}2…) y se estaciona en el punto medio de ellos. Las motos recogen y se
+        reabastecen aquí: "me quedé sin paquetes" → voy a mi Torre, no vuelvo al almacén de Villa El Salvador.
       </ScreenHeader>
       <div className="mb-4 flex flex-wrap gap-1.5">
         {used.map((c) => (
@@ -65,7 +65,7 @@ function ColmenaInner() {
             }}
             className={`rounded-full px-3 py-1.5 text-xs font-bold ${c.id === col.id ? 'bg-turq text-white' : 'bg-white text-turq shadow-sm'}`}
           >
-            🚐 {c.short}
+            ♜ {c.letter} · {c.short}
           </button>
         ))}
       </div>
@@ -74,8 +74,8 @@ function ColmenaInner() {
           time={fmtTime(trip.arrival)}
           title={
             <div className="bg-turq px-4 py-3 text-white">
-              <div className="font-bold">🚐 {col.name}</div>
-              <div className="text-[11px] text-white/80">Panel web PANAL en el celular del encargado</div>
+              <div className="font-bold">♜ {col.name}</div>
+              <div className="text-[11px] text-white/80">Panel web Tablero f. en el celular del encargado</div>
             </div>
           }
         >
@@ -85,7 +85,7 @@ function ColmenaInner() {
                 <MapPin size={15} /> Estacionado · {fmtTime(trip.arrival)}
               </div>
               <div className="text-xs text-gris">
-                Punto: estacionamiento genérico · {trip.panalIds.length} panales · {trip.orders} pedidos · {trip.minivans} minivan(es)
+                Punto medio de sus cuadrantes (estacionamiento genérico) · {trip.cuadIds.length} cuadrantes · {trip.orders} pedidos · {trip.trucks} camión(es)
               </div>
             </div>
             {last && (
@@ -110,7 +110,7 @@ function ColmenaInner() {
                     </div>
                     <div className="shrink-0 text-right text-[11px] font-bold">
                       {isScanned ? <span className="text-verde">✓ entregada</span> : r.shift === 1 ? <span className="text-amber-600">⏳ en camino</span> : <span className="text-gris">turno {r.shift}</span>}
-                      {reload && <div className="text-naranja">2.ª bolsa ~{fmtTime(reload.eta)}</div>}
+                      {reload && <div className="text-naranja">↻ reabastece ~{fmtTime(reload.eta)}</div>}
                     </div>
                   </div>
                 )
@@ -141,7 +141,7 @@ function ColmenaInner() {
               <div className="text-xs text-gris">antes de salir a ruta</div>
             </div>
             <div className="rounded-2xl bg-turq p-4 text-white">
-              <div className="text-[11px] font-bold uppercase opacity-80">Carga correcta Colmena</div>
+              <div className="text-[11px] font-bold uppercase opacity-80">Carga correcta Torre</div>
               <div className="text-3xl font-extrabold">{fmtPct(1 - params.loadErrorScan, 2)}</div>
               <div className="text-xs opacity-80">vs {fmtPct(1 - params.loadErrorManual, 1)} carga manual</div>
             </div>
@@ -152,13 +152,13 @@ function ColmenaInner() {
             </h3>
             <ol className="mt-2 space-y-1.5 text-sm">
               <li>
-                <b>1. HUB:</b> carga pocas minivanes (no decenas de motos) con bolsas etiquetadas por panal.
+                <b>1. HUB:</b> carga pocos camiones (no decenas de motos) con bolsas etiquetadas por cuadrante.
               </li>
               <li>
-                <b>2. Colmena:</b> el encargado escanea cada bolsa al entregarla a cada moto; si no corresponde, alerta roja.
+                <b>2. Torre:</b> el encargado escanea cada bolsa al entregarla a cada moto; si no corresponde, alerta roja.
               </li>
               <li>
-                <b>3. Recarga:</b> la 2.ª bolsa del día se entrega aquí mismo, a minutos del panal.
+                <b>3. Reabastecer:</b> la 2.ª bolsa del día se entrega aquí mismo, a minutos del cuadrante (el “enroque”).
               </li>
             </ol>
             <div className="mt-3 flex flex-wrap gap-1">
@@ -167,12 +167,12 @@ function ColmenaInner() {
             </div>
           </div>
           <div className="card p-5 text-sm">
-            <h3 className="font-extrabold text-bosque">En SimpliRoute la Colmena es…</h3>
+            <h3 className="font-extrabold text-bosque">En SimpliRoute la Torre es…</h3>
             <p className="mt-1">
-              <b>un vehículo + un punto de inicio (depot)</b>. Las rutas de estos panales empiezan aquí y la recarga es una 2.ª ruta del día desde la Colmena. No se cambia
+              <b>un vehículo + un punto de inicio (depot)</b>. Las rutas de estos cuadrantes empiezan aquí y el reabastecimiento es una 2.ª ruta del día desde la Torre. No se cambia
               de sistema.
             </p>
-            <p className="mt-2 text-xs text-gris">Por validar con Falabella: ¿quién paga la minivan? (proveedor de transporte) · ¿qué puntos usar? (tiendas / estacionamientos)</p>
+            <p className="mt-2 text-xs text-gris">Por validar con Falabella: ¿quién paga el camión? (proveedor de transporte) · ¿qué puntos usar? (tiendas / estacionamientos)</p>
           </div>
         </div>
       </div>

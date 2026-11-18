@@ -84,13 +84,13 @@ Centroides aproximados (lat, lng). Radio sugerido para muestreo entre 0,8 y 3 km
 - **HUB XD (aprox.):** -12.2250, -76.9300 (zona industrial de Villa El Salvador). Mostrar como "ubicación aproximada".
 - La costa está al oeste/suroeste: descartar puntos en el mar (usar el GeoJSON o un polígono simple de costa).
 
-## 6. Puntos Colmena candidatos [SUPUESTO]
+## 6. Puntos Torre candidatos [SUPUESTO]
 Nombres genéricos (no usar tiendas reales):
 | Punto | lat | lng |
 |---|---|---|
-| Punto Colmena Miraflores | -12.1190 | -77.0300 |
-| Punto Colmena San Isidro | -12.0960 | -77.0350 |
-| Punto Colmena Surco | -12.1300 | -76.9900 |
-| Punto Colmena Pueblo Libre | -12.0750 | -77.0550 |
-| Punto Colmena Los Olivos | -11.9700 | -77.0700 |
-| Punto Colmena SJL | -11.9900 | -77.0050 |
+| Punto Torre Miraflores | -12.1190 | -77.0300 |
+| Punto Torre San Isidro | -12.0960 | -77.0350 |
+| Punto Torre Surco | -12.1300 | -76.9900 |
+| Punto Torre Pueblo Libre | -12.0750 | -77.0550 |
+| Punto Torre Los Olivos | -11.9700 | -77.0700 |
+| Punto Torre SJL | -11.9900 | -77.0050 |

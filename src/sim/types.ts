@@ -13,8 +13,10 @@ export interface Order extends LatLng {
   isAna?: boolean
 }
 
-export interface Panal {
-  id: string
+/** Cuadrante = grupo de casillas vecinas = 1 ruta estática de ≤50 paquetes */
+export interface Cuadrante {
+  id: string // id interno estable (Q-07): lo usan los ajustes del planificador
+  name: string // nombre visible: letra de su Torre + número (A3) o H + número si sale del HUB (H12)
   cells: string[]
   color: number
   centroid: LatLng
@@ -23,27 +25,30 @@ export interface Panal {
   estMinutes: number
   districts: string[]
   distHubKm: number
-  colmenaId: string | null
+  torreId: string | null
 }
 
-export interface PanalMap {
+/** El tablero del día: casillas → cuadrantes para un nivel de demanda y día de la semana */
+export interface Tablero {
   level: DemandLevel
   weekday: number
-  panales: Panal[]
-  cellToPanal: Record<string, string>
-  cellDemand: Record<string, number> // paradas esperadas por día
+  cuadrantes: Cuadrante[]
+  cellToCuad: Record<string, string>
+  cellDemand: Record<string, number> // paquetes esperados por casilla y día
   cellDistrict: Record<string, string>
 }
 
-export interface Colmena {
+/** Torre = camión reabastecedor estacionado en el punto medio de sus cuadrantes */
+export interface Torre {
   id: string
+  letter: string // A, B, C… (da nombre a sus cuadrantes)
   name: string
   short: string
   lat: number
   lng: number
-  panalIds: string[]
+  cuadIds: string[]
   expLoad: number
-  minivans: number
+  trucks: number
   distHubKm: number
 }
 
@@ -55,21 +60,35 @@ export interface CellMove {
   reason: string
 }
 
+/** Paquetes que pasan a un cuadrante vecino con espacio (ruta alternativa) */
+export interface Spill {
+  from: string
+  to: string
+  orders: number
+}
+
+/** Un cuadrante con más de 50 paquetes esta noche se reparte por zona entre 2+ motorizados */
+export interface RiderSplit {
+  cuadId: string
+  orders: number
+  parts: { cells: string[]; orders: number }[]
+}
+
 export interface Assignment {
-  orderPanal: Record<string, string>
+  orderCuad: Record<string, string>
   orderCell: Record<string, string>
   timeMs: number
   count: number
   withoutCoords: number
   moves: CellMove[]
-  panalCounts: Record<string, number>
+  cuadCounts: Record<string, number>
 }
 
 export type ScenarioKey = 'A' | 'B' | 'C'
 export const SCENARIO_LABEL: Record<ScenarioKey, string> = {
   A: 'Hoy (distrito + FIFO)',
-  B: 'PANAL',
-  C: 'PANAL + Colmena',
+  B: 'Tablero f. (sin Torre)',
+  C: 'TORRE f.',
 }
 
 export interface Stop extends LatLng {
@@ -83,9 +102,10 @@ export interface Stop extends LatLng {
 export interface Route {
   id: string
   scenario: ScenarioKey
-  label: string // panal o distrito
-  panalId?: string
-  depotId: string // 'HUB' o id de colmena
+  label: string // cuadrante o distrito
+  cuadId?: string
+  part?: number // 1, 2… si el cuadrante se repartió entre varios motorizados
+  depotId: string // 'HUB' o id de la Torre
   depot: LatLng
   stops: Stop[]
   deliveries: number
@@ -101,14 +121,14 @@ export interface Route {
   volume: number
 }
 
-export interface MinivanTrip {
-  colmenaId: string
-  minivans: number
+export interface TorreTrip {
+  torreId: string
+  trucks: number
   orders: number
   departure: number
   arrival: number
-  panalIds: string[]
-  secondMinivanAlert: boolean
+  cuadIds: string[]
+  secondTruckAlert: boolean
 }
 
 export interface Kpis {
@@ -116,6 +136,7 @@ export interface Kpis {
   routes: number
   spr: number
   pctRoutesUnder30: number
+  maxStops: number
   emptyKm: number
   totalKm: number
   otd: number // % pedidos con ETA dentro del turno
@@ -126,7 +147,8 @@ export interface Kpis {
   geocodeMin: number
   vehiclesAtHub: number
   motosFromHub: number
-  minivans: number
+  motosNeeded: number // motorizados distintos: el turno con más rutas
+  trucks: number
   reloads: number
   windowHours: number
   sortEnd: number
@@ -137,12 +159,14 @@ export interface ScenarioResult {
   key: ScenarioKey
   routes: Route[]
   kpis: Kpis
-  minivanTrips: MinivanTrip[]
+  torreTrips: TorreTrip[]
+  splits: RiderSplit[]
+  spills: Spill[] // paquetes que pasaron a un cuadrante vecino con espacio
   orderRoute: Record<string, string>
 }
 
 export interface LearningItem {
-  panalId: string
+  cuadId: string
   kind: 'slow' | 'small' | 'overflow'
   message: string
   metric: string
@@ -154,19 +178,35 @@ export interface SimInput {
   params: Params
   level: DemandLevel
   weekday: number
-  pctPin: number // % con Pin f. para escenarios B y C
-  overrides: Record<string, string> // celda -> panal (ajustes del planificador)
+  pctPin: number // % con Pin f. para los escenarios B y C
+  overrides: Record<string, string> // casilla -> cuadrante (ajustes del planificador)
 }
 
 export interface SimResult {
   input: SimInput
   orders: Order[]
-  map: PanalMap
-  colmenas: Colmena[]
+  map: Tablero
+  torres: Torre[]
   assignment: Assignment
   scenarios: Record<ScenarioKey, ScenarioResult>
   learning: LearningItem[]
-  mapAfter: Record<string, string> // cellToPanal luego del aprendizaje
+  mapAfter: Record<string, string> // cellToCuad luego del aprendizaje
   cellDifficulty: Record<string, number>
   computeMs: number
+}
+
+/** Capacidad necesaria por nivel de demanda (motorizados y camiones) */
+export interface CapacityRow {
+  level: DemandLevel
+  orders: number
+  routesToday: number
+  motosToday: number
+  routesTorre: number
+  motosTorre: number
+  torres: number
+  trucks: number
+  sortEnd: number
+  otdToday: number
+  otdTorre: number
+  maxStopsTorre: number
 }

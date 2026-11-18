@@ -1,8 +1,8 @@
-// Integración SIMULADA: no hace llamadas reales. Genera el log de lo que PANAL enviaría.
+// Integración SIMULADA: no hace llamadas reales. Genera el log de lo que el Tablero f. enviaría.
 // Los cuerpos JSON son ejemplos simplificados; deben validarse contra https://documentation.simpliroute.com/es/
-import { cellToBoundary } from 'h3-js'
+import { cellBoundary } from '../sim/grid'
 import { fmtTime } from '../sim/geo'
-import type { Colmena, Order, Panal, Route } from '../sim/types'
+import type { Torre, Order, Cuadrante, Route } from '../sim/types'
 import type { ApiLogEntry, RoutingProvider } from './RoutingProvider'
 
 let seq = 0
@@ -17,18 +17,18 @@ const sample = <T,>(arr: T[], n: number) => arr.slice(0, n)
 export class MockSimpliRouteProvider implements RoutingProvider {
   readonly name = 'SimpliRoute (simulado)'
 
-  async publishZones(panales: Panal[], source: string) {
-    const zones = panales.map((p) => ({
-      name: p.id,
-      // contorno simplificado: borde de la primera celda (ejemplo)
-      coordinates: cellToBoundary(p.cells[0]).map(([lat, lng]) => ({ lat: +lat.toFixed(5), lng: +lng.toFixed(5) })),
-      meta: { cells_h3_res8: p.cells.length, expected_stops: Math.round(p.expStops), districts: p.districts },
+  async publishZones(cuadrantes: Cuadrante[], source: string) {
+    const zones = cuadrantes.map((p) => ({
+      name: p.name,
+      // contorno simplificado: borde de la primera casilla (ejemplo)
+      coordinates: cellBoundary(p.cells[0]).map(([lat, lng]) => ({ lat: +lat.toFixed(5), lng: +lng.toFixed(5) })),
+      meta: { casillas: p.cells.length, max_paquetes: 50, torre: p.torreId ?? 'HUB', expected_stops: Math.round(p.expStops), districts: p.districts },
     }))
     return [
       entry({
         method: 'POST',
         endpoint: '/v1/zones/',
-        summary: `${panales.length} panales publicados como Zonas`,
+        summary: `${cuadrantes.length} cuadrantes publicados como Zonas`,
         source,
         body: { zones: sample(zones, 2), '…': `${Math.max(0, zones.length - 2)} zonas más` },
         response: { created: zones.length, ids: sample(zones, 3).map((_, i) => 90100 + i) },
@@ -36,16 +36,17 @@ export class MockSimpliRouteProvider implements RoutingProvider {
     ]
   }
 
-  async publishVehicles(colmenas: Colmena[], source: string) {
-    const used = colmenas.filter((c) => c.panalIds.length > 0)
+  async publishVehicles(torres: Torre[], source: string) {
+    const used = torres.filter((c) => c.cuadIds.length > 0)
     return [
       entry({
         method: 'POST',
         endpoint: '/v1/routes/vehicles/',
-        summary: `${used.length} Colmenas como vehículo + punto de inicio (depot)`,
+        summary: `${used.length} Torres como vehículo + punto de inicio (depot)`,
         source,
         body: used.slice(0, 2).map((c) => ({
-          name: `Minivan ${c.name}`,
+          name: `Camión ${c.name}`,
+          vehicle_role: 'reabastecedor (Torre)',
           capacity: 400,
           location_start_address: c.name,
           location_start_latitude: c.lat,
@@ -58,7 +59,7 @@ export class MockSimpliRouteProvider implements RoutingProvider {
     ]
   }
 
-  async sendVisits(orders: Order[], orderPanal: Record<string, string>, source: string) {
+  async sendVisits(orders: Order[], orderCuad: Record<string, string>, source: string) {
     const visits = orders.map((o) => ({
       title: o.id,
       address: o.address,
@@ -66,7 +67,7 @@ export class MockSimpliRouteProvider implements RoutingProvider {
       longitude: +o.lng.toFixed(6),
       reference: o.id,
       load: o.volume,
-      tags: [orderPanal[o.id] ?? 'sin-panal'],
+      tags: [orderCuad[o.id] ?? 'sin-cuadrante'],
       planned_date: 'día de entrega',
     }))
     const ana = visits.find((v) => v.title === 'F-208341')
@@ -74,10 +75,26 @@ export class MockSimpliRouteProvider implements RoutingProvider {
       entry({
         method: 'POST',
         endpoint: '/v1/routes/visits/',
-        summary: `${String(visits.length).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} visitas con lat/long y etiqueta de panal`,
+        summary: `${String(visits.length).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} visitas con lat/long y etiqueta de cuadrante`,
         source,
         body: [...(ana ? [ana] : []), ...sample(visits.filter((v) => v !== ana), 2), `… ${visits.length - 3} visitas más`],
         response: { created: visits.length, errors: 0 },
+      }),
+    ]
+  }
+
+  async splitZone(cuadName: string, parts: { rider: string; orders: number }[], source: string) {
+    return [
+      entry({
+        method: 'PUT',
+        endpoint: `/v1/zones/${cuadName}/ (sub-zonas)`,
+        summary: `${cuadName} se reparte por zona entre ${parts.length} motorizados (ninguno pasa de 50)`,
+        source,
+        body: {
+          zone: cuadName,
+          sub_zones: parts.map((p, i) => ({ name: `${cuadName}·${i + 1}`, driver: p.rider, visits: p.orders })),
+        },
+        response: { updated: true, routes: parts.length },
       }),
     ]
   }
@@ -87,15 +104,15 @@ export class MockSimpliRouteProvider implements RoutingProvider {
       entry({
         method: 'POST',
         endpoint: '/v1/plans/ (optimización)',
-        summary: `Optimizar orden de paradas en ${routes.length} rutas (1 por panal)`,
+        summary: `Optimizar orden de paradas en ${routes.length} rutas (1 por cuadrante)`,
         source,
         body: {
-          name: 'Plan PANAL',
+          name: 'Plan TORRE f.',
           routes: routes.slice(0, 2).map((r) => ({
-            vehicle: r.depotId === 'HUB' ? 'Moto HUB VES' : `Moto Colmena ${r.depotId}`,
+            vehicle: `Moto ${r.label}`,
             zone: r.label,
             visits: r.deliveries,
-            start: r.depotId,
+            start: r.depotId === 'HUB' ? 'HUB VES' : 'Torre (punto medio de sus cuadrantes)',
           })),
           '…': `${Math.max(0, routes.length - 2)} rutas más`,
         },
@@ -112,9 +129,9 @@ export class MockSimpliRouteProvider implements RoutingProvider {
       entry({
         method: 'POST',
         endpoint: '/v1/webhooks/ (entregas)',
-        summary: 'Webhook de entregas → PANAL aprende cada semana',
+        summary: 'Webhook de entregas → el Tablero f. aprende cada semana',
         source,
-        body: { event: 'visit_checkout', url: 'https://panal.example/api/webhooks/entregas' },
+        body: { event: 'visit_checkout', url: 'https://torre-f.example/api/webhooks/entregas' },
         response: { active: true },
       }),
     ]

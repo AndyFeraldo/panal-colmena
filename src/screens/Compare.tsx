@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ArrowDownRight, ArrowUpRight, Minus, Factory } from 'lucide-react'
-import { BaseMap, ColmenaMarkers, HubMarker, PANAL_PALETTE } from '../components/MapKit'
+import { BaseMap, TorreMarkers, HubMarker, CUAD_PALETTE } from '../components/MapKit'
 import { Polyline } from 'react-leaflet'
 import { NeedResult, ScreenHeader, SimBadge, Tag, fmtInt, fmtMs, fmtNum, fmtPct } from '../components/ui'
 import { LevelPicker, WeekdayPicker } from './Planner'
@@ -31,7 +31,9 @@ type Row = {
 
 const ROWS: Row[] = [
   { label: 'Paradas por ruta (SPR)', get: (k) => k.spr, fmt: (v) => fmtNum(v), better: 'higher', target: TARGETS.spr, tag: 'Meta 50' },
+  { label: 'Máx. paquetes en una ruta', get: (k) => k.maxStops, fmt: (v) => fmtInt(v), better: 'lower', tag: 'Tope 50' },
   { label: 'N.º de rutas', get: (k) => k.routes, fmt: (v) => fmtInt(v), better: 'lower' },
+  { label: 'Motos necesarias (turno pico)', get: (k) => k.motosNeeded, fmt: (v) => fmtInt(v), better: 'lower' },
   { label: '% rutas con < 30 paradas', get: (k) => k.pctRoutesUnder30, fmt: (v) => fmtPct(v), better: 'lower' },
   { label: 'Km vacíos (sin entregar)', get: (k) => k.emptyKm, fmt: (v) => fmtInt(v), better: 'lower' },
   { label: 'Pedidos dentro del turno (proxy OTD)', get: (k) => k.otd, fmt: (v) => fmtPct(v), better: 'higher', target: TARGETS.otd, tag: 'Meta 96%' },
@@ -45,8 +47,8 @@ const ROWS: Row[] = [
     better: 'none',
   },
   { label: 'Geocodificación manual', get: (k) => k.geocodeMin, fmt: (v) => `${fmtInt(v / 60)} h`, better: 'lower' },
-  { label: 'Vehículos a cargar en el HUB (turno 1)', get: (k) => k.vehiclesAtHub, fmt: (v, k) => `${fmtInt(v)}${k.minivans ? ` (${k.minivans} minivanes)` : ''}`, better: 'lower' },
-  { label: 'Viajes de recarga', get: (k) => k.reloads, fmt: (v) => fmtInt(v), better: 'lower' },
+  { label: 'Vehículos a cargar en el HUB (turno 1)', get: (k) => k.vehiclesAtHub, fmt: (v, k) => `${fmtInt(v)}${k.trucks ? ` (${k.trucks} camiones)` : ''}`, better: 'lower' },
+  { label: 'Viajes para reabastecer', get: (k) => k.reloads, fmt: (v) => fmtInt(v), better: 'lower' },
   { label: 'Ventana prometida al cliente', get: (k) => k.windowHours, fmt: (v) => `${v} h`, better: 'lower' },
 ]
 
@@ -85,7 +87,7 @@ function MiniMap({ routes }: { routes: Route[] }) {
   const result = useSim((s) => s.result)!
   const colorOf = useMemo(() => {
     const m = new Map<string, string>()
-    routes.forEach((r, i) => m.set(r.id, PANAL_PALETTE[i % PANAL_PALETTE.length]))
+    routes.forEach((r, i) => m.set(r.id, CUAD_PALETTE[i % CUAD_PALETTE.length]))
     return m
   }, [routes])
   const hasCol = routes.some((r) => r.depotId !== 'HUB')
@@ -99,7 +101,7 @@ function MiniMap({ routes }: { routes: Route[] }) {
           interactive={false}
         />
       ))}
-      {hasCol && <ColmenaMarkers colmenas={result.colmenas} panales={result.map.panales} showLinks={false} />}
+      {hasCol && <TorreMarkers torres={result.torres} cuadrantes={result.map.cuadrantes} showLinks={false} />}
       <HubMarker />
     </BaseMap>
   )
@@ -118,18 +120,18 @@ function CompareInner() {
   const hist = sc.A.kpis.stopsHistogram.map((h, i) => ({
     bucket: h.bucket,
     Hoy: h.count,
-    PANAL: sc.B.kpis.stopsHistogram[i].count,
-    'PANAL + Colmena': sc.C.kpis.stopsHistogram[i].count,
+    'Tablero f.': sc.B.kpis.stopsHistogram[i].count,
+    'TORRE f.': sc.C.kpis.stopsHistogram[i].count,
   }))
   const bars = [
-    { name: 'Km vacíos', Hoy: Math.round(sc.A.kpis.emptyKm), PANAL: Math.round(sc.B.kpis.emptyKm), 'PANAL + Colmena': Math.round(sc.C.kpis.emptyKm) },
+    { name: 'Km vacíos', Hoy: Math.round(sc.A.kpis.emptyKm), 'Tablero f.': Math.round(sc.B.kpis.emptyKm), 'TORRE f.': Math.round(sc.C.kpis.emptyKm) },
   ]
   const otdBars = [
     {
       name: '% a tiempo',
       Hoy: +(sc.A.kpis.otd * 100).toFixed(1),
-      PANAL: +(sc.B.kpis.otd * 100).toFixed(1),
-      'PANAL + Colmena': +(sc.C.kpis.otd * 100).toFixed(1),
+      'Tablero f.': +(sc.B.kpis.otd * 100).toFixed(1),
+      'TORRE f.': +(sc.C.kpis.otd * 100).toFixed(1),
     },
   ]
 
@@ -137,7 +139,7 @@ function CompareInner() {
     <div className={running ? 'opacity-80 transition' : 'transition'}>
       <ScreenHeader
         kicker="P7 · Gerencia / Jurado"
-        title="Comparador: Hoy vs PANAL vs PANAL + Colmena"
+        title="Comparador: Hoy vs Tablero f. vs TORRE f."
         right={
           <>
             <SimBadge />
@@ -154,7 +156,7 @@ function CompareInner() {
         </div>
         <Slider label="Pedidos por día (base)" value={params.ordersPerDay} min={2000} max={8000} step={250} onChange={(v) => setParams({ ordersPerDay: v })} fmt={fmtInt} tag={<Tag kind="SUPUESTO" />} />
         <Slider label="% pedidos con pin (con Pin f.)" value={pctPin} min={0.5} max={1} step={0.01} onChange={setPctPin} fmt={(v) => fmtPct(v, 0)} tag={<Tag kind="SUPUESTO">Hoy: {fmtPct(params.pctPinToday, 0)}</Tag>} />
-        <Slider label="Distancia mínima para Colmena" value={params.colmenaMinDistKm} min={0} max={20} step={0.5} onChange={(v) => setParams({ colmenaMinDistKm: v })} fmt={(v) => `${fmtNum(v)} km`} />
+        <Slider label="Distancia mínima para Torre" value={params.torreMinDistKm} min={0} max={20} step={0.5} onChange={(v) => setParams({ torreMinDistKm: v })} fmt={(v) => `${fmtNum(v)} km`} />
         <Slider label="Tamaño de mochila" value={params.backpackDm3} min={60} max={200} step={5} onChange={(v) => setParams({ backpackDm3: v })} fmt={(v) => `${v} dm³`} />
         <Slider label="Tiempo por parada" value={params.minPerStop} min={2} max={6} step={0.1} onChange={(v) => setParams({ minPerStop: v })} fmt={(v) => `${fmtNum(v)} min`} />
       </div>
@@ -237,8 +239,8 @@ function CompareInner() {
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   <Bar dataKey="Hoy" fill={SC_COLOR.A} radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="PANAL" fill={SC_COLOR.B} radius={[3, 3, 0, 0]} />
-                  <Bar dataKey="PANAL + Colmena" fill={SC_COLOR.C} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="Tablero f." fill={SC_COLOR.B} radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="TORRE f." fill={SC_COLOR.C} radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -254,7 +256,7 @@ function CompareInner() {
             <p className="mt-1 text-sm">
               La capacidad física del HUB ({params.hubCapacityPerHour} ped/h) no aumenta. Con {fmtInt(result.orders.filter((o) => o.wave === 3).length)} pedidos en la oleada de 02:30,
               la clasificación termina a las <b className={sc.A.kpis.sortEnd > 360 ? 'text-naranja' : 'text-bosque'}>{fmtTime(sc.A.kpis.sortEnd)}</b>
-              {sc.A.kpis.sortEnd > 360 ? ' — después de la salida de las 06:00.' : '.'} La Colmena solo lo desacopla: el HUB carga pocas minivanes primero y las motos no esperan en VES.
+              {sc.A.kpis.sortEnd > 360 ? ' — después de la salida de las 06:00.' : '.'} La Torre solo lo desacopla: el HUB carga pocos camiones primero y las motos no esperan en VES.
             </p>
             <div className="mt-2">
               <Tag kind="RETO">700 ped/h · oleadas 15/25/60%</Tag>
@@ -307,8 +309,8 @@ function SmallBar({ title, data, domain }: { title: string; data: Record<string,
             <YAxis tick={{ fontSize: 10 }} domain={domain ?? [0, 'auto']} />
             <Tooltip />
             <Bar dataKey="Hoy" fill={SC_COLOR.A} radius={[3, 3, 0, 0]} />
-            <Bar dataKey="PANAL" fill={SC_COLOR.B} radius={[3, 3, 0, 0]} />
-            <Bar dataKey="PANAL + Colmena" fill={SC_COLOR.C} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="Tablero f." fill={SC_COLOR.B} radius={[3, 3, 0, 0]} />
+            <Bar dataKey="TORRE f." fill={SC_COLOR.C} radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

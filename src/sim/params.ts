@@ -22,14 +22,14 @@ export interface Params {
   sizeVolumes: Record<SizeKey, number>
   sizeMixNormal: number[] // XS3, XS2, XS, S, M
   sizeMixCyber: number[]
-  panalTargetStops: number
-  panalMaxStops: number
-  panalMergeMax: number
-  panalMinStops: number
-  colmenaMinDistKm: number
-  colmenaReachKm: number
-  minivanCapacity: number
-  minivanSpeedKmh: number
+  cuadTargetStops: number
+  cuadMaxStops: number
+  cuadMergeMax: number
+  cuadMinStops: number
+  torreMinDistKm: number
+  torreReachKm: number
+  truckCapacity: number
+  truckSpeedKmh: number
   loadErrorManual: number
   loadErrorScan: number
   reloadMinutes: number
@@ -56,14 +56,14 @@ export const DEFAULT_PARAMS: Params = {
   sizeVolumes: { XS3: 0.5, XS2: 1, XS: 2, S: 4, M: 8 },
   sizeMixNormal: [0.3, 0.25, 0.2, 0.15, 0.1],
   sizeMixCyber: [0.2, 0.2, 0.2, 0.22, 0.18],
-  panalTargetStops: 48,
-  panalMaxStops: 55,
-  panalMergeMax: 62,
-  panalMinStops: 30,
-  colmenaMinDistKm: 10,
-  colmenaReachKm: 8,
-  minivanCapacity: 400,
-  minivanSpeedKmh: 28,
+  cuadTargetStops: 45,
+  cuadMaxStops: 50,
+  cuadMergeMax: 50,
+  cuadMinStops: 30,
+  torreMinDistKm: 10,
+  torreReachKm: 8,
+  truckCapacity: 400,
+  truckSpeedKmh: 28,
   loadErrorManual: 0.005,
   loadErrorScan: 0.0005,
   reloadMinutes: 10,
@@ -133,15 +133,15 @@ export const PARAM_META: ParamMeta[] = [
   simple('detourFactor', 'Factor de rodeo (calles vs. línea recta)', 'SUPUESTO', '×', 1, { step: 0.05 }),
   simple('minPerStop', 'Tiempo por parada', 'SUPUESTO', 'min', 1, { step: 0.1 }),
   simple('backpackDm3', 'Capacidad de la mochila', 'SUPUESTO', 'dm³', 1, { note: 'Entrevista: tallas por volumen', step: 5 }),
-  simple('panalTargetStops', 'Objetivo de paradas por panal', 'SUPUESTO', 'paradas', 1, { note: 'Meta SPR 50', step: 1 }),
-  simple('panalMaxStops', 'Máximo de paradas por panal', 'SUPUESTO', 'paradas', 1, { step: 1 }),
-  simple('colmenaMinDistKm', 'Distancia mínima al HUB para usar Colmena', 'SUPUESTO', 'km', 1, { step: 0.5 }),
-  simple('colmenaReachKm', 'Alcance máximo de un punto Colmena', 'SUPUESTO', 'km', 1, { step: 0.5 }),
-  simple('minivanCapacity', 'Capacidad de la minivan Colmena', 'SUPUESTO', 'pedidos', 1, { step: 10 }),
-  simple('minivanSpeedKmh', 'Velocidad de la minivan (madrugada)', 'SUPUESTO', 'km/h', 1, { step: 1 }),
+  simple('cuadTargetStops', 'Objetivo de paquetes por cuadrante', 'DISEÑO', 'paquetes', 1, { note: 'Deja margen para llegar a 50 (meta SPR)', step: 1 }),
+  simple('cuadMaxStops', 'Tope de paquetes por ruta (cuadrante)', 'RETO', 'paquetes', 1, { note: 'Meta SPR 50: ninguna ruta pasa de 50', step: 1 }),
+  simple('torreMinDistKm', 'Distancia mínima al HUB para usar Torre', 'SUPUESTO', 'km', 1, { step: 0.5 }),
+  simple('torreReachKm', 'Alcance máximo de una Torre', 'SUPUESTO', 'km', 1, { step: 0.5 }),
+  simple('truckCapacity', 'Capacidad del camión Torre', 'SUPUESTO', 'pedidos', 1, { step: 10 }),
+  simple('truckSpeedKmh', 'Velocidad del camión (madrugada)', 'SUPUESTO', 'km/h', 1, { step: 1 }),
   simple('loadErrorManual', 'Error de carga por pedido (manual)', 'SUPUESTO', '%', 100, { step: 0.01 }),
   simple('loadErrorScan', 'Error de carga por pedido (escaneo doble)', 'SUPUESTO', '%', 100, { step: 0.01 }),
-  simple('reloadMinutes', 'Tiempo de recarga de mochila', 'SUPUESTO', 'min', 1, { step: 1 }),
+  simple('reloadMinutes', 'Tiempo para reabastecer la mochila en la Torre', 'SUPUESTO', 'min', 1, { step: 1 }),
   simple('seed', 'Semilla aleatoria (demo reproducible)', 'DISEÑO', '', 1, { step: 1 }),
 ]
 
