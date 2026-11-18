@@ -18,6 +18,10 @@ const ROLES = [
 ]
 
 const SUBNAV: Record<string, { label: string; to: string }[]> = {
+  Planificador: [
+    { label: 'Tablero del día', to: '/planificador' },
+    { label: 'Temporada baja vs Cyber', to: '/planificador/temporadas' },
+  ],
   Cliente: [
     { label: 'Al comprar', to: '/cliente/checkout' },
     { label: 'El día de la entrega', to: '/cliente/entrega' },

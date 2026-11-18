@@ -11,6 +11,7 @@ import Layout from './components/Layout'
 import Home from './screens/Home'
 import Checkout from './screens/Checkout'
 import Planner from './screens/Planner'
+import Seasons from './screens/Seasons'
 import Hub from './screens/Hub'
 import TorreScreen from './screens/TorreScreen'
 import Rider from './screens/Rider'
@@ -32,6 +33,7 @@ const router = createHashRouter([
       { path: 'cliente/checkout', element: <Checkout /> },
       { path: 'cliente/entrega', element: <Delivery /> },
       { path: 'planificador', element: <Planner /> },
+      { path: 'planificador/temporadas', element: <Seasons /> },
       { path: 'admin', element: <Admin /> },
       { path: 'hub', element: <Hub /> },
       { path: 'torre', element: <TorreScreen /> },

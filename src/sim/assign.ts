@@ -1,7 +1,8 @@
 import { gridDisk, latLngToCell } from './grid'
 import { DISTRICTS } from './data'
 import { haversineKm } from './geo'
-import { cellCenter, neighbors } from './cuadrantes'
+import { cellCenter } from './cuadrantes'
+import { linkedNeighbors } from './barriers'
 import type { Params } from './params'
 import type { Assignment, CellMove, Order, Tablero } from './types'
 
@@ -89,7 +90,7 @@ export function proposeOverflowMoves(a: Assignment, map: Tablero, p: Params): Ce
       if ((counts[pn.id] ?? 0) <= p.cuadMaxStops) break
       const n = cellCounts[c] ?? 0
       const opts = new Set<string>()
-      for (const nb of neighbors(c)) {
+      for (const nb of linkedNeighbors(c, p.respectBarriers)) {
         const o = owner[nb]
         if (o && o !== pn.id) opts.add(o)
       }

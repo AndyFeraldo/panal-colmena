@@ -9,6 +9,7 @@ export const FLOW: FlowStep[] = [
   { path: '/', label: 'Inicio', icon: '♜' },
   { path: '/cliente/checkout', label: 'El cliente compra con Pin f.', icon: '🛒' },
   { path: '/planificador', label: 'El planificador arma el tablero', icon: '🗺️' },
+  { path: '/planificador/temporadas', label: 'Temporada baja vs Cyber', icon: '📐' },
   { path: '/hub', label: '02:30 en el HUB', icon: '🏭' },
   { path: '/admin', label: 'Admin: ¿más de 50?', icon: '⚖️' },
   { path: '/torre', label: 'La Torre entrega bolsas', icon: '♜' },

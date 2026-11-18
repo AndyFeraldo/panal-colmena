@@ -1,9 +1,10 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import L from 'leaflet'
-import { CircleMarker, GeoJSON, MapContainer, Marker, Polygon, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
+import { CircleMarker, GeoJSON, MapContainer, Marker, Pane, Polygon, Polyline, TileLayer, Tooltip, useMap, useMapEvents } from 'react-leaflet'
 import GoogleMutant from 'leaflet.gridlayer.googlemutant/src/Leaflet.GoogleMutant.mjs'
 import { CLEAN_STYLE, GOOGLE_KEY, loadGoogleMaps, useGoogleMaps } from './googleMaps'
 import { DISTRICT_GEOJSON, HUB, type LatLng } from '../sim/data'
+import { BARRIERS } from '../sim/barriers'
 import type { Torre, Cuadrante, Route } from '../sim/types'
 import { cellBoundary, cellCenter, cellEdges, cellParity } from '../sim/grid'
 
@@ -154,6 +155,41 @@ export function DistrictLayer({ highlight }: { highlight?: string[] }) {
         }
       }}
     />
+  )
+}
+
+/** Vías rápidas (naranja) y ríos (azul) que un cuadrante no debe cruzar. Trazo aproximado. */
+export function BarrierLayer({ highlight }: { highlight?: boolean }) {
+  return (
+    <Pane name="barriers" style={{ zIndex: 450 }}>
+      {BARRIERS.map((b) => (
+        <Fragment key={b.id}>
+          <Polyline positions={b.path} interactive={false} pathOptions={{ color: '#ffffff', weight: highlight ? 9 : 7, opacity: 0.9 }} />
+          <Polyline
+            positions={b.path}
+            pathOptions={{ color: b.kind === 'via' ? '#F26B21' : '#2B7BB9', weight: highlight ? 5 : 3.5, opacity: 0.95 }}
+          >
+            <Tooltip sticky>
+              {b.kind === 'via' ? '🛣️' : '🌊'} {b.name} · ningún cuadrante la cruza (trazo aproximado)
+            </Tooltip>
+          </Polyline>
+        </Fragment>
+      ))}
+    </Pane>
+  )
+}
+
+/** Leyenda corta de barreras */
+export function BarrierLegend() {
+  return (
+    <span className="flex items-center gap-3 text-[11px] font-semibold text-bosque">
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-1 w-5 rounded bg-naranja" /> Vía rápida
+      </span>
+      <span className="flex items-center gap-1">
+        <span className="inline-block h-1 w-5 rounded" style={{ background: '#2B7BB9' }} /> Río
+      </span>
+    </span>
   )
 }
 

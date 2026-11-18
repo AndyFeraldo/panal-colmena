@@ -80,7 +80,7 @@ function CheckoutInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="🛒 Cliente · al comprar" title="Pin f.: marca tu puerta" hint="Arrastra el pin y confirma. El pedido ya sabe su cuadrante y su Torre.">
+      <ScreenHeader kicker="🛒 Cliente · al comprar" title="Pin f.: marca tu puerta" hint="El pin solo aparece si no sabemos dónde está la puerta. Un toque y el pedido ya sabe su cuadrante y su Torre.">
         Ana (Miraflores) compra unos audífonos el jueves a las 21:00. Al pagar arrastra el pin hasta su puerta.
       </ScreenHeader>
       <div className="grid items-start gap-6 lg:grid-cols-[400px_1fr]">
@@ -168,6 +168,27 @@ function CheckoutInner() {
                   <div className="text-[11px] text-white/70">{x.s}</div>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div className="card p-5">
+            <h3 className="font-extrabold text-bosque">¿Cuándo aparece el pin? Solo si hace falta</h3>
+            <p className="text-xs text-gris">Dentro del checkout de siempre (web y app de Falabella). No es otra app ni otro registro.</p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-3">
+              {[
+                { t: 'Dirección guardada con ubicación', s: 'Se usa la que ya tiene', n: '0 pasos extra', ok: true },
+                { t: 'Dirección nueva y clara', s: 'Se ubica sola, de día', n: '0 pasos extra', ok: true },
+                { t: 'Dirección dudosa', s: 'Sin número, Mz./Lt., referencia', n: '1 toque: “aquí es mi puerta”', ok: false },
+              ].map((x) => (
+                <div key={x.t} className={`rounded-xl p-3 ${x.ok ? 'bg-lima-soft' : 'bg-naranja-soft'}`}>
+                  <div className="text-sm font-extrabold text-bosque">{x.t}</div>
+                  <div className="text-[11px] text-bosque/75">{x.s}</div>
+                  <div className={`mt-1 text-sm font-extrabold ${x.ok ? 'text-verde' : 'text-naranja'}`}>{x.n}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex gap-1">
+              <Tag kind="SUPUESTO">el celular de la izquierda muestra el 3.er caso</Tag>
             </div>
           </div>
 

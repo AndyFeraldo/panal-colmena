@@ -1,10 +1,15 @@
 import { create } from 'zustand'
 import { DEFAULT_PARAMS, type DemandLevel, type Params } from '../sim/params'
 import type { CapacityRow, SimInput, SimResult } from '../sim/types'
+import type { seasonMaps } from '../sim/simulate'
+
+export type SeasonMaps = ReturnType<typeof seasonMaps>
 import type { ApiLogEntry } from '../integration/RoutingProvider'
 
 let worker: Worker | null = null
 let capWorker: Worker | null = null
+let seasonWorker: Worker | null = null
+let seasonId = 0
 let reqId = 0
 let capId = 0
 let timer: ReturnType<typeof setTimeout> | null = null
@@ -29,6 +34,9 @@ interface SimState {
   capacity: CapacityRow[] | null
   capacityKey: string
   capacityRunning: boolean
+  seasons: SeasonMaps | null
+  seasonsKey: string
+  runSeasons: () => void
   demoStep: number | null
   setParams: (p: Partial<Params>) => void
   resetParams: () => void
@@ -63,6 +71,8 @@ export const useSim = create<SimState>((set, get) => ({
   capacity: null,
   capacityKey: '',
   capacityRunning: false,
+  seasons: null,
+  seasonsKey: '',
   demoStep: null,
   setParams: (p) => {
     set((s) => ({ params: { ...s.params, ...p }, ...(p.pctPinWithPinF !== undefined ? { pctPin: p.pctPinWithPinF } : {}) }))
@@ -135,6 +145,21 @@ export const useSim = create<SimState>((set, get) => ({
       set({ capacityRunning: false, capacity: (e.data.capacity as CapacityRow[]) ?? null })
     }
     capWorker.postMessage({ id, input, kind: 'capacity' })
+  },
+  /** Mapas de temporada baja y Cyber (mismo día) en un worker aparte */
+  runSeasons: () => {
+    const s = get()
+    const key = JSON.stringify([s.params, s.weekday])
+    if (s.seasonsKey === key) return
+    const input: SimInput = { params: s.params, level: s.level, weekday: s.weekday, pctPin: s.pctPin, overrides: {} }
+    if (!seasonWorker) seasonWorker = newWorker()
+    const id = ++seasonId
+    set({ seasonsKey: key, seasons: null })
+    seasonWorker.onmessage = (e: MessageEvent<{ id: number; seasons?: SeasonMaps }>) => {
+      if (e.data.id !== seasonId) return
+      set({ seasons: e.data.seasons ?? null })
+    }
+    seasonWorker.postMessage({ id, input, kind: 'seasons' })
   },
   setDemoStep: (demoStep) => set({ demoStep }),
 }))

@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Diamond, Send, Undo2 } from 'lucide-react'
-import { BaseMap, CellLabels, TorreMarkers, DistrictLayer, HubMarker, CUAD_PALETTE, CuadranteLayer, CuadranteNames, MapLegend, MapModePicker, heatBreaks, type MapMode } from '../components/MapKit'
+import { BarrierLayer, BarrierLegend, BaseMap, CellLabels, TorreMarkers, DistrictLayer, HubMarker, CUAD_PALETTE, CuadranteLayer, CuadranteNames, MapLegend, MapModePicker, heatBreaks, type MapMode } from '../components/MapKit'
 import { KpiCard, NeedResult, ScreenHeader, fmtInt, fmtNum, fmtPct } from '../components/ui'
 import { routingProvider } from '../integration/MockSimpliRouteProvider'
 import { borderNeighbors } from '../sim/cuadrantes'
+import { cuadrantesCrossingBarriers } from '../sim/barriers'
 import { DEMAND_LEVELS, WEEKDAYS } from '../sim/params'
 import { useSim } from '../store/useSim'
 
@@ -59,6 +60,8 @@ function PlannerInner() {
   const overrides = useSim((s) => s.overrides)
   const moveCell = useSim((s) => s.moveCell)
   const clearOverrides = useSim((s) => s.clearOverrides)
+  const respect = useSim((s) => s.params.respectBarriers)
+  const setParams = useSim((s) => s.setParams)
   const log = useSim((s) => s.log)
   const navigate = useNavigate()
   const [selected, setSelected] = useState<string | null>(null)
@@ -73,14 +76,15 @@ function PlannerInner() {
     const cross = map.cuadrantes.filter((p) => p.districts.length > 1).length / n
     const usedCol = torres.filter((c) => c.cuadIds.length > 0)
     const inCol = map.cuadrantes.filter((p) => p.torreId).length
-    return { n, avg, cross, usedCol, inCol }
+    const barrierCross = cuadrantesCrossingBarriers(map.cuadrantes)
+    return { n, avg, cross, usedCol, inCol, barrierCross }
   }, [map, torres])
 
   const breaks = useMemo(() => heatBreaks(Object.values(map.cellDemand)), [map])
   const nm = (id: string) => map.cuadrantes.find((q) => q.id === id)?.name ?? id
   const cuadrante = map.cuadrantes.find((p) => p.id === selected)
   const torre = torres.find((c) => c.id === cuadrante?.torreId)
-  const neighborsOfCell = cell ? borderNeighbors(cell, map.cellToCuad) : []
+  const neighborsOfCell = cell ? borderNeighbors(cell, map.cellToCuad, respect) : []
 
   const publish = async () => {
     setPublishing(true)
@@ -106,7 +110,7 @@ function PlannerInner() {
         }
       >
         Lima como un tablero: <b>casillas en rombo de ~8 cuadras</b>. Las casillas vecinas se juntan en <b>cuadrantes de máximo 50 paquetes</b> (1 ruta), armados con 8 semanas de
-        historial y nombrados por su Torre (A1, A2…) o H si salen directo del HUB. Las líneas punteadas son los límites de distrito: los cuadrantes los cruzan.
+        historial y nombrados por su Torre (A1, A2…) o H si salen directo del HUB. Las líneas punteadas son los límites de distrito: los cuadrantes los cruzan. Las líneas <b>naranjas (vías rápidas)</b> y <b>azules (ríos)</b> no se cruzan nunca: la Panamericana parte el tablero.
         <br />
         <b>3 vistas del mapa:</b> 🔥 Calor = dónde hay más paquetes (la vista para decidir) · ◆ Cuadrantes = un color por ruta · ♜ Tablero = negro lo atiende una Torre,
         blanco sale directo del HUB (es la imagen de marca; va semitransparente para no tapar las calles). Datos: historial sintético de 8 semanas.
@@ -116,7 +120,10 @@ function PlannerInner() {
         <div className="card relative overflow-hidden p-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2 pt-1">
             <MapModePicker mode={mode} onChange={setMode} />
-            <MapLegend mode={mode} breaks={breaks} unit="Paquetes esperados por casilla" />
+            <div className="flex flex-wrap items-center gap-3">
+              <BarrierLegend />
+              <MapLegend mode={mode} breaks={breaks} unit="Paquetes esperados por casilla" />
+            </div>
           </div>
           <BaseMap className="h-[min(68vh,640px)]" zoom={11.5} center={[-12.09, -77.02]}>
             <CuadranteLayer
@@ -130,6 +137,7 @@ function PlannerInner() {
               breaks={breaks}
             />
             <DistrictLayer highlight={cuadrante?.districts} />
+            <BarrierLayer highlight={!respect} />
             <CellLabels demand={map.cellDemand} />
             <CuadranteNames cuadrantes={map.cuadrantes} minZoom={12} dark={(q) => (mode === 'tablero' ? !!q.torreId : mode === 'calor' ? q.expStops / Math.max(1, q.cells.length) >= breaks[3] : false)} />
             <TorreMarkers torres={torres} cuadrantes={map.cuadrantes} activeId={torre?.id} />
@@ -143,6 +151,37 @@ function PlannerInner() {
             <KpiCard label="Paquetes prom." value={fmtNum(stats.avg)} sub="por cuadrante · tope 50" />
             <KpiCard label="Cruzan distritos" value={fmtPct(stats.cross, 0)} sub="de los cuadrantes" />
             <KpiCard label="Torres" value={stats.usedCol.length} sub={`${stats.inCol} cuadrantes · ${stats.usedCol.reduce((s, c) => s + c.trucks, 0)} camión(es)`} tone="turq" />
+          </div>
+
+          <div className={`rounded-2xl p-4 ${stats.barrierCross.size === 0 ? 'bg-lima-soft' : 'bg-naranja-soft'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-bosque/70">Cruzan Panamericana, vía rápida o río</div>
+                <div className={`text-2xl font-extrabold ${stats.barrierCross.size === 0 ? 'text-bosque' : 'text-naranja'}`}>
+                  {stats.barrierCross.size} cuadrante{stats.barrierCross.size === 1 ? '' : 's'}
+                </div>
+              </div>
+              <label className="flex cursor-pointer flex-col items-center gap-1 text-[11px] font-bold text-bosque">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 accent-[#12301F]"
+                  checked={respect}
+                  onChange={(e) => setParams({ respectBarriers: e.target.checked })}
+                />
+                Respetar
+              </label>
+            </div>
+            {stats.barrierCross.size > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {[...stats.barrierCross.keys()].slice(0, 12).map((id) => (
+                  <button key={id} onClick={() => setSelected(id)} className="chip bg-white text-naranja hover:underline">
+                    {nm(id)}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1 text-xs text-bosque/80">Las casillas a los dos lados de una vía rápida o un río nunca se juntan en la misma ruta.</p>
+            )}
           </div>
 
           {cuadrante ? (
@@ -182,6 +221,11 @@ function PlannerInner() {
                   ))}
                 </div>
               </div>
+              {stats.barrierCross.has(cuadrante.id) && (
+                <p className="mt-3 rounded-xl bg-naranja-soft p-2 text-xs font-semibold text-naranja">
+                  ⚠️ Este cuadrante cruza: {stats.barrierCross.get(cuadrante.id)!.join(' · ')}
+                </p>
+              )}
               {cell && map.cellToCuad[cell] === cuadrante.id && neighborsOfCell.length > 0 && (
                 <div className="mt-3 rounded-xl bg-crema p-3">
                   <div className="text-xs font-bold text-bosque">Casilla de borde seleccionada ({Math.round(map.cellDemand[cell] ?? 0)} paquetes esperados)</div>

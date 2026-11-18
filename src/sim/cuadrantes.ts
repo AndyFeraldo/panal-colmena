@@ -1,6 +1,7 @@
 import { HUB } from './data'
 import { haversineKm } from './geo'
 import { CELL_AREA_KM2, cellCenter, neighbors } from './grid'
+import { linkedNeighbors } from './barriers'
 import { avgVolume, type DemandLevel, type Params } from './params'
 import type { Cuadrante, Tablero } from './types'
 
@@ -59,7 +60,7 @@ export function buildCuadrantes(
     const frontier = new Set<string>()
     const rejected = new Set<string>()
     const addFrontier = (c: string) => {
-      for (const n of neighbors(c)) if (inDemand.has(n) && !owner.has(n) && !rejected.has(n)) frontier.add(n)
+      for (const n of linkedNeighbors(c, p.respectBarriers)) if (inDemand.has(n) && !owner.has(n) && !rejected.has(n)) frontier.add(n)
     }
     addFrontier(seed)
     while (g.stops < p.cuadTargetStops && frontier.size > 0) {
@@ -104,7 +105,7 @@ export function buildCuadrantes(
     for (const { g, i } of alive) {
       if (g.cells.length === 0) continue
       const neigh = new Set<number>()
-      for (const c of g.cells) for (const n of neighbors(c)) {
+      for (const c of g.cells) for (const n of linkedNeighbors(c, p.respectBarriers)) {
         const o = owner.get(n)
         if (o !== undefined && o !== i && groups[o].cells.length > 0) neigh.add(o)
       }
@@ -244,10 +245,10 @@ export function applyCellOverrides(map: Tablero, overrides: Record<string, strin
 }
 
 /** ¿La casilla está en el borde de su cuadrante? Devuelve los cuadrantes vecinos */
-export function borderNeighbors(cell: string, cellToCuad: Record<string, string>): string[] {
+export function borderNeighbors(cell: string, cellToCuad: Record<string, string>, respect = true): string[] {
   const own = cellToCuad[cell]
   const out = new Set<string>()
-  for (const n of neighbors(cell)) {
+  for (const n of linkedNeighbors(cell, respect)) {
     const o = cellToCuad[n]
     if (o && o !== own) out.add(o)
   }

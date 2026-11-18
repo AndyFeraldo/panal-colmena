@@ -97,3 +97,10 @@ export function capacityByLevel(input: SimInput): CapacityRow[] {
     }
   })
 }
+
+/** Mismo día en temporada baja y en Cyber: para ver que los cuadrantes se achican solos cuando sube la demanda */
+export function seasonMaps(input: SimInput) {
+  const bajo = buildMap({ ...input, level: 'Bajo', overrides: {} })
+  const cyber = buildMap({ ...input, level: 'Cyber', overrides: {} })
+  return { Bajo: bajo, Cyber: cyber }
+}

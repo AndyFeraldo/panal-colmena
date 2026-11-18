@@ -34,6 +34,7 @@ export interface Params {
   loadErrorScan: number
   reloadMinutes: number
   shiftShares: [number, number, number] // reparto de rutas por turno
+  respectBarriers: boolean // no juntar casillas separadas por vía rápida o río
   seed: number
 }
 
@@ -56,6 +57,7 @@ export const DEFAULT_PARAMS: Params = {
   sizeVolumes: { XS3: 0.5, XS2: 1, XS: 2, S: 4, M: 8 },
   sizeMixNormal: [0.3, 0.25, 0.2, 0.15, 0.1],
   sizeMixCyber: [0.2, 0.2, 0.2, 0.22, 0.18],
+  respectBarriers: true,
   cuadTargetStops: 45,
   cuadMaxStops: 50,
   cuadMergeMax: 50,

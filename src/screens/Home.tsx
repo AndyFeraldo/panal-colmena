@@ -15,6 +15,14 @@ const USERS = [
   { to: '/gerencia', icon: '📊', who: 'Gerencia', what: 'Resultados: hoy vs TORRE f.' },
 ]
 
+// Qué herramienta usa cada uno (feedback del mentor: no sumar apps ni pasos innecesarios)
+const APPS = [
+  { icon: '🛒', who: 'Cliente', uses: 'Web y app de Falabella + el WhatsApp de siempre', change: 'el pin solo si su dirección no tiene ubicación; recibe "llega entre 9 y 11"', newTool: false },
+  { icon: '🛵', who: 'Motorizado', uses: 'La app de SimpliRoute de siempre', change: 'su ruta empieza en la Torre y recarga ahí, no en VES', newTool: false },
+  { icon: '♜', who: 'Encargado de Torre', uses: 'Celular con escáner del proveedor', change: 'escanea cada bolsa al dársela a la moto (el único paso nuevo en la calle)', newTool: false },
+  { icon: '🗺️', who: 'Oficina y HUB', uses: 'Tablero f. (web) → publica en SimpliRoute', change: 'arma los cuadrantes de día; a las 02:30 solo se clasifica', newTool: true },
+]
+
 const PIECES = [
   { icon: '📍', name: 'Pin f.' },
   { icon: '♟️', name: 'Tablero f.' },
@@ -75,6 +83,30 @@ export default function Home() {
               <span className="mt-0.5 text-xs text-gris">{u.what}</span>
               <span className="mt-auto pt-2 text-xs font-bold text-turq group-hover:underline">Entrar →</span>
             </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* CERO APPS NUEVAS */}
+      <section className="card p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-xl font-extrabold text-bosque">Cero apps nuevas: cada uno sigue en lo suyo</h2>
+          <span className="text-xs font-semibold text-gris">Lo único nuevo es el Tablero f., y solo en la oficina</span>
+        </div>
+        <div className="mt-3 divide-y divide-linea">
+          {APPS.map((a) => (
+            <div key={a.who} className="grid items-center gap-x-4 gap-y-1 py-2.5 sm:grid-cols-[170px_1fr_1.2fr]">
+              <div className="flex items-center gap-2 font-extrabold text-bosque">
+                <span className="text-xl">{a.icon}</span> {a.who}
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 text-sm">
+                <span className={`chip ${a.newTool ? 'bg-lima text-bosque' : 'bg-crema text-bosque'}`}>{a.newTool ? 'NUEVO' : 'YA EXISTE'}</span>
+                {a.uses}
+              </div>
+              <div className="text-sm text-bosque/80">
+                <b className="text-bosque">Cambia:</b> {a.change}
+              </div>
+            </div>
           ))}
         </div>
       </section>

@@ -5,6 +5,7 @@ import { ANA, DISTRICTS } from './data'
 import { districtOf, haversineKm } from './geo'
 import { generateOrders } from './orders'
 import { cuadAdjacency } from './cuadrantes'
+import { cuadrantesCrossingBarriers, linkedNeighbors } from './barriers'
 import { DEFAULT_PARAMS } from './params'
 import { sequenceRoute, routeLength } from './routing'
 import { buildMap, runSimulation } from './simulate'
@@ -49,7 +50,7 @@ describe('cuadrantes', () => {
   })
   it('paradas promedio cerca del objetivo', () => {
     const avg = map.cuadrantes.reduce((s, p) => s + p.expStops, 0) / map.cuadrantes.length
-    expect(avg).toBeGreaterThan(35)
+    expect(avg).toBeGreaterThan(32) // con barreras quedan algunos cuadrantes chicos junto a vías y ríos
     expect(avg).toBeLessThan(56)
   })
   it('hay cuadrantes que cruzan distritos', () => {
@@ -174,5 +175,30 @@ describe('simulación completa', () => {
     const ana = C.routes.find((x) => x.stops.some((s) => s.orderId === ANA.id))!
     console.log('Ana', ana.label, ana.depotId, ana.rider, ana.startTime, ana.stops.find((s) => s.orderId === ANA.id)!.eta)
     expect(haversineKm(ANA, ana.depot)).toBeLessThan(20)
+  })
+})
+
+describe('barreras geográficas (Panamericana, Vía Expresa, ríos)', () => {
+  it('con barreras, ningún cuadrante queda partido por una vía rápida o un río', () => {
+    for (const level of ['Normal', 'Cyber'] as const) {
+      const { map } = buildMap({ ...input, level })
+      expect(cuadrantesCrossingBarriers(map.cuadrantes).size).toBe(0)
+    }
+  })
+  it('sin barreras, sí aparecen cuadrantes que cruzan (el ajuste importa)', () => {
+    const { map } = buildMap({ ...input, params: { ...DEFAULT_PARAMS, respectBarriers: false } })
+    expect(cuadrantesCrossingBarriers(map.cuadrantes).size).toBeGreaterThan(0)
+  })
+  it('la Panamericana Sur separa Surco de San Juan de Miraflores', () => {
+    const surco = latLngToCell(-12.15, -76.99)
+    const sjm = latLngToCell(-12.15, -76.965)
+    expect(linkedNeighbors(surco)).not.toContain(sjm)
+  })
+  it('en Cyber los cuadrantes son más chicos que en temporada baja', () => {
+    const bajo = buildMap({ ...input, level: 'Bajo' }).map
+    const cyber = buildMap({ ...input, level: 'Cyber' }).map
+    const avgCells = (m: typeof bajo) => m.cuadrantes.reduce((s, q) => s + q.cells.length, 0) / m.cuadrantes.length
+    expect(cyber.cuadrantes.length).toBeGreaterThan(bajo.cuadrantes.length)
+    expect(avgCells(cyber)).toBeLessThan(avgCells(bajo))
   })
 })
