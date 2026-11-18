@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ArrowDown, ArrowLeftRight, ArrowRight, Terminal, Trash2, Zap } from 'lucide-react'
-import { NeedResult, ScreenHeader, Tag } from '../components/ui'
+import { More, NeedResult, ScreenHeader, Tag } from '../components/ui'
 import { routingProvider } from '../integration/MockSimpliRouteProvider'
 import { applyMoves } from '../sim/assign'
 import { orderCuadNames } from '../sim/cuadrantes'
@@ -41,7 +41,7 @@ function IntegrationInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="P8 · Integración" title="No es una app nueva: es el Tablero f. conectado a lo que Falabella ya usa">
+      <ScreenHeader kicker="🔌 Conexión con SimpliRoute" title="No es una app nueva" hint="Se conecta con SimpliRoute, que Falabella ya usa. Nada se reemplaza.">
         El Tablero f. se integra con la API pública de SimpliRoute. El motorizado sigue con su app de siempre y el cliente con sus mensajes de siempre.
       </ScreenHeader>
 
@@ -112,8 +112,9 @@ function IntegrationInner() {
               </tbody>
             </table>
           </div>
-          <div className="card p-4 text-sm">
-            <h3 className="font-extrabold text-bosque">Arquitectura del código</h3>
+          <div className="space-y-2">
+            <div className="mt-3 rounded-xl bg-naranja-soft p-3 text-xs font-semibold text-bosque">⚠ Falta confirmar con Falabella si su licencia incluye acceso a la API.</div>
+            <More label="Para técnicos: arquitectura del código" className="card">
             <ul className="mt-2 space-y-1">
               <li>
                 • Interfaz <code className="rounded bg-crema px-1">RoutingProvider</code>
@@ -131,7 +132,7 @@ function IntegrationInner() {
                 documentation.simpliroute.com/es
               </a>
             </p>
-            <div className="mt-3 rounded-xl bg-naranja-soft p-3 text-xs font-semibold text-bosque">⚠ Falta confirmar con Falabella si su licencia incluye acceso a la API.</div>
+            </More>
           </div>
         </div>
 

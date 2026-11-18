@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { Loader2, FlaskConical } from 'lucide-react'
+import { useState, type ReactNode } from 'react'
+import { ChevronDown, FlaskConical, Info, Loader2 } from 'lucide-react'
 import { useSim } from '../store/useSim'
 import type { SourceKind } from '../sim/params'
 
@@ -83,23 +83,48 @@ export function KpiCard({
 export function ScreenHeader({
   kicker,
   title,
+  hint,
   children,
   right,
 }: {
   kicker: string
   title: ReactNode
+  /** una sola línea, siempre visible: qué haces en esta pantalla */
+  hint?: ReactNode
+  /** explicación larga: queda escondida tras "¿Qué veo aquí?" */
   children?: ReactNode
   right?: ReactNode
 }) {
+  const [open, setOpen] = useState(false)
   return (
     <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
       <div className="min-w-0">
         <div className="text-xs font-bold uppercase tracking-wider text-turq">{kicker}</div>
         <h1 className="h-title">{title}</h1>
-        {children && <p className="mt-1 max-w-3xl text-sm text-gris">{children}</p>}
+        {hint && <p className="mt-1 text-sm font-semibold text-bosque/80 md:text-base">{hint}</p>}
+        {children && (
+          <>
+            <button onClick={() => setOpen((o) => !o)} className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-turq-soft px-2.5 py-1 text-xs font-bold text-turq hover:bg-turq hover:text-white">
+              <Info size={13} /> {open ? 'Ocultar explicación' : '¿Qué veo aquí?'}
+            </button>
+            {open && <div className="anim-pop mt-2 max-w-3xl rounded-xl bg-white p-3 text-sm text-gris shadow-sm">{children}</div>}
+          </>
+        )}
       </div>
       {right && <div className="flex flex-wrap items-center gap-2">{right}</div>}
     </div>
+  )
+}
+
+/** Detalle opcional: cerrado por defecto para no llenar la pantalla de texto */
+export function More({ label = 'Ver detalle', children, className = '' }: { label?: string; children: ReactNode; className?: string }) {
+  return (
+    <details className={`group rounded-xl bg-white/70 text-sm ${className}`}>
+      <summary className="flex cursor-pointer list-none items-center gap-1 px-3 py-2 text-xs font-bold text-turq hover:underline">
+        <ChevronDown size={14} className="transition group-open:rotate-180" /> {label}
+      </summary>
+      <div className="px-3 pb-3 text-gris">{children}</div>
+    </details>
   )
 }
 

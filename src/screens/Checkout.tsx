@@ -80,7 +80,7 @@ function CheckoutInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="P1 · Cliente · Checkout de falabella.com" title={<>Pin f.: el pedido nace con su punto exacto</>}>
+      <ScreenHeader kicker="🛒 Cliente · al comprar" title="Pin f.: marca tu puerta" hint="Arrastra el pin y confirma. El pedido ya sabe su cuadrante y su Torre.">
         Ana (Miraflores) compra unos audífonos el jueves a las 21:00. Al pagar arrastra el pin hasta su puerta.
       </ScreenHeader>
       <div className="grid items-start gap-6 lg:grid-cols-[400px_1fr]">
@@ -169,9 +169,6 @@ function CheckoutInner() {
                 </div>
               ))}
             </div>
-            <p className="mt-3 text-xs text-white/70">
-              Asignación instantánea: <b className="text-lima">casilla → cuadrante → Torre</b> es una búsqueda en un diccionario. A las 02:30 no hay nada que decidir.
-            </p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -179,9 +176,9 @@ function CheckoutInner() {
               <div className="flex items-center gap-2 font-extrabold text-naranja">
                 <Search size={18} /> Sin pin (hoy)
               </div>
-              <p className="mt-2 text-sm">Alguien busca la dirección en Google a mano antes de rutear.</p>
+              <p className="mt-2 text-sm">Alguien la busca a mano en Google.</p>
               <div className="mt-2 text-3xl font-extrabold text-bosque">{String(params.geocodeMinPerOrder).replace('.', ',')} min</div>
-              <div className="text-xs text-gris">por pedido sin coordenadas · el pedido cae al centro del distrito</div>
+              <div className="text-xs text-gris">por pedido sin coordenadas</div>
               <div className="mt-2 flex gap-1">
                 <Tag kind="ENTREVISTA" />
                 <Tag kind="SUPUESTO" />
@@ -191,11 +188,9 @@ function CheckoutInner() {
               <div className="flex items-center gap-2 font-extrabold text-verde">
                 <Timer size={18} /> Con Pin f.
               </div>
-              <p className="mt-2 text-sm">La coordenada viene del cliente. Direcciones antiguas se geocodifican de día, automáticamente.</p>
+              <p className="mt-2 text-sm">El punto lo marca el cliente.</p>
               <div className="mt-2 text-3xl font-extrabold text-bosque">0 min</div>
-              <div className="text-xs text-gris">
-                Esta noche: {result.assignment.withoutCoords} de {fmtInt(result.orders.length)} pedidos aún sin pin (escenario con Pin f.)
-              </div>
+              <div className="text-xs text-gris">esta noche: {result.assignment.withoutCoords} sin pin de {fmtInt(result.orders.length)}</div>
               <div className="mt-2">
                 <Tag kind="NUEVO" />
               </div>

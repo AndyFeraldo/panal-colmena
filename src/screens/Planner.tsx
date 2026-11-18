@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Diamond, Send, Undo2, MousePointerClick } from 'lucide-react'
+import { Diamond, Send, Undo2 } from 'lucide-react'
 import { BaseMap, CellLabels, TorreMarkers, DistrictLayer, HubMarker, CUAD_PALETTE, CuadranteLayer, CuadranteNames, MapLegend, MapModePicker, heatBreaks, type MapMode } from '../components/MapKit'
-import { KpiCard, NeedResult, ScreenHeader, SimBadge, Tag, fmtInt, fmtNum, fmtPct } from '../components/ui'
+import { KpiCard, NeedResult, ScreenHeader, fmtInt, fmtNum, fmtPct } from '../components/ui'
 import { routingProvider } from '../integration/MockSimpliRouteProvider'
 import { borderNeighbors } from '../sim/cuadrantes'
 import { DEMAND_LEVELS, WEEKDAYS } from '../sim/params'
@@ -56,7 +56,6 @@ export function WeekdayPicker() {
 
 function PlannerInner() {
   const result = useSim((s) => s.result)!
-  const pctPin = useSim((s) => s.pctPin)
   const overrides = useSim((s) => s.overrides)
   const moveCell = useSim((s) => s.moveCell)
   const clearOverrides = useSim((s) => s.clearOverrides)
@@ -96,8 +95,9 @@ function PlannerInner() {
   return (
     <div>
       <ScreenHeader
-        kicker="P2 · Planificador logístico · de día"
-        title="Tablero f.: mapa de calor, cuadrantes y Torres"
+        kicker="🗺️ Planificador · de día"
+        title="El tablero de Lima"
+        hint="Más oscuro = más paquetes. Haz clic en un cuadrante para ver su detalle."
         right={
           <>
             <LevelPicker />
@@ -107,6 +107,9 @@ function PlannerInner() {
       >
         Lima como un tablero: <b>casillas en rombo de ~8 cuadras</b>. Las casillas vecinas se juntan en <b>cuadrantes de máximo 50 paquetes</b> (1 ruta), armados con 8 semanas de
         historial y nombrados por su Torre (A1, A2…) o H si salen directo del HUB. Las líneas punteadas son los límites de distrito: los cuadrantes los cruzan.
+        <br />
+        <b>3 vistas del mapa:</b> 🔥 Calor = dónde hay más paquetes (la vista para decidir) · ◆ Cuadrantes = un color por ruta · ♜ Tablero = negro lo atiende una Torre,
+        blanco sale directo del HUB (es la imagen de marca; va semitransparente para no tapar las calles). Datos: historial sintético de 8 semanas.
       </ScreenHeader>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_340px]">
@@ -132,9 +135,6 @@ function PlannerInner() {
             <TorreMarkers torres={torres} cuadrantes={map.cuadrantes} activeId={torre?.id} />
             <HubMarker />
           </BaseMap>
-          <div className="pointer-events-none absolute bottom-4 left-4 z-[500] flex items-center gap-1.5 rounded-lg bg-white/95 px-2.5 py-1.5 text-[11px] font-semibold shadow">
-            <MousePointerClick size={13} /> Clic en un cuadrante para ver su detalle · haz zoom para ver pedidos por casilla
-          </div>
         </div>
 
         <div className="space-y-3">
@@ -143,12 +143,6 @@ function PlannerInner() {
             <KpiCard label="Paquetes prom." value={fmtNum(stats.avg)} sub="por cuadrante · tope 50" />
             <KpiCard label="Cruzan distritos" value={fmtPct(stats.cross, 0)} sub="de los cuadrantes" />
             <KpiCard label="Torres" value={stats.usedCol.length} sub={`${stats.inCol} cuadrantes · ${stats.usedCol.reduce((s, c) => s + c.trucks, 0)} camión(es)`} tone="turq" />
-            <KpiCard label="Pedidos con pin" value={fmtPct(pctPin, 0)} sub="con Pin f." tone="lima" />
-            <KpiCard label="Casillas activas" value={fmtInt(Object.keys(map.cellToCuad).length)} sub="rombos de 0,8 km de lado" />
-          </div>
-          <div className="flex items-center gap-2">
-            <SimBadge />
-            <Tag kind="SUPUESTO">Historial sintético 8 semanas</Tag>
           </div>
 
           {cuadrante ? (
@@ -212,10 +206,8 @@ function PlannerInner() {
               )}
             </div>
           ) : (
-            <div className="card p-4 text-sm text-gris">Selecciona un cuadrante en el mapa para ver qué distritos cruza, sus paquetes, volumen, tiempo y su Torre.</div>
+            <div className="card p-4 text-center text-sm font-semibold text-gris">👆 Toca un cuadrante en el mapa</div>
           )}
-
-          <ModeNote mode={mode} />
 
           {Object.keys(overrides).length > 0 && (
             <button onClick={clearOverrides} className="btn-ghost w-full">
@@ -225,25 +217,9 @@ function PlannerInner() {
           <button onClick={publish} disabled={publishing} className="btn-turq w-full !py-3 !text-base">
             <Send size={18} /> Publicar en SimpliRoute
           </button>
-          <p className="text-center text-[11px] text-gris">Cuadrantes → Zonas · Torres → Vehículo + inicio · Webhook de entregas (simulado)</p>
         </div>
       </div>
     </div>
   )
 }
 
-/** Por qué hay 3 vistas: el blanco/negro es la marca, el calor es lo que ayuda a decidir */
-function ModeNote({ mode }: { mode: MapMode }) {
-  const text: Record<MapMode, string> = {
-    calor:
-      'Mapa de calor: muestra dónde se concentran los paquetes. Es la vista para decidir (dónde poner una Torre, qué cuadrante partir). Las casillas oscuras tienen más paquetes.',
-    cuadrantes: 'Un color por cuadrante: sirve para ver los límites de cada ruta y que cruzan distritos. Dos vecinos nunca comparten color.',
-    tablero:
-      'Blanco y negro, como un tablero: negro = lo abastece una Torre, blanco = sale directo del HUB. Es la imagen de marca; es translúcido para no tapar las calles.',
-  }
-  return (
-    <div className="rounded-2xl bg-white p-3 text-xs text-gris shadow-sm">
-      <b className="text-bosque">¿Por qué esta vista?</b> {text[mode]}
-    </div>
-  )
-}

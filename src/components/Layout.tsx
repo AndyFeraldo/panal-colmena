@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, Loader2, Pause, Play, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Loader2, Pause, Play, X } from 'lucide-react'
 import { useSim } from '../store/useSim'
 import { BASE, TorreLogo } from './ui'
 import { demoSteps } from './demoSteps'
+import { FLOW } from './flow'
 
 const ROLES = [
   { label: 'Inicio', to: '/', match: ['/'] },
@@ -13,19 +14,19 @@ const ROLES = [
   { label: 'HUB', to: '/hub', match: ['/hub'] },
   { label: 'Torre', to: '/torre', match: ['/torre'] },
   { label: 'Motorizado', to: '/motorizado', match: ['/motorizado'] },
-  { label: 'Gerencia', to: '/gerencia', match: ['/gerencia', '/reporte', '/capacidad', '/evaluacion'] },
+  { label: 'Resultados', to: '/gerencia', match: ['/gerencia', '/reporte', '/capacidad', '/evaluacion'] },
 ]
 
 const SUBNAV: Record<string, { label: string; to: string }[]> = {
   Cliente: [
-    { label: 'P1 · Checkout con Pin f.', to: '/cliente/checkout' },
-    { label: 'P6 · Día de la entrega', to: '/cliente/entrega' },
+    { label: 'Al comprar', to: '/cliente/checkout' },
+    { label: 'El día de la entrega', to: '/cliente/entrega' },
   ],
-  Gerencia: [
-    { label: 'P7 · Comparador de escenarios', to: '/gerencia' },
-    { label: 'Capacidad: motos y camiones', to: '/capacidad' },
-    { label: '✓ Evaluación vs. el reto', to: '/evaluacion' },
-    { label: 'P9 · Reporte y aprendizaje', to: '/reporte' },
+  Resultados: [
+    { label: 'Hoy vs TORRE f.', to: '/gerencia' },
+    { label: 'Motos y camiones', to: '/capacidad' },
+    { label: '¿Responde al reto?', to: '/evaluacion' },
+    { label: 'Aprendizaje', to: '/reporte' },
   ],
 }
 
@@ -124,13 +125,13 @@ export default function Layout() {
               to="/integracion"
               className={({ isActive }) => `whitespace-nowrap rounded-md px-2 py-1 font-semibold ${isActive ? 'bg-white text-turq shadow-sm' : 'text-turq hover:underline'}`}
             >
-              🔌 Integración SimpliRoute
+              🔌 SimpliRoute
             </NavLink>
             <NavLink
               to="/supuestos"
               className={({ isActive }) => `whitespace-nowrap rounded-md px-2 py-1 font-semibold ${isActive ? 'bg-white text-bosque shadow-sm' : 'text-gris hover:text-bosque'}`}
             >
-              ⚙️ Supuestos y fuentes
+              ⚙️ Supuestos
             </NavLink>
           </div>
         </div>
@@ -138,6 +139,7 @@ export default function Layout() {
 
       <main className={`mx-auto w-full max-w-[1400px] flex-1 px-3 py-5 md:px-5 ${demoStep !== null ? 'pb-48' : 'pb-16'}`}>
         <Outlet />
+        {demoStep === null && <FlowNav pathname={pathname} />}
       </main>
 
       {demoStep !== null && <DemoBar step={demoStep} />}
@@ -146,6 +148,50 @@ export default function Layout() {
         Propuesta de equipo · <b className="text-lima">Innovathon Ulima × Falabella 2026</b> · No es material oficial de Falabella · Datos simulados.
       </footer>
     </div>
+  )
+}
+
+/** Guía "Anterior / Siguiente" al pie de cada pantalla: para que cualquiera sepa por dónde seguir */
+function FlowNav({ pathname }: { pathname: string }) {
+  const i = FLOW.findIndex((f) => f.path === pathname)
+  if (i < 0) return null
+  const prev = FLOW[i - 1]
+  const next = FLOW[i + 1]
+  return (
+    <nav aria-label="Recorrido" className="mt-8 rounded-2xl bg-white p-3 shadow-sm">
+      <div className="mb-2 flex items-center gap-1" aria-hidden>
+        {FLOW.map((f, j) => (
+          <Link key={f.path} to={f.path} title={f.label} className={`h-1.5 flex-1 rounded-full ${j <= i ? 'bg-verde' : 'bg-crema'} ${j === i ? '!bg-bosque' : ''}`} />
+        ))}
+      </div>
+      <div className="flex items-stretch gap-2">
+        {prev ? (
+          <Link to={prev.path} className="flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3 py-2 text-left text-sm text-gris hover:bg-crema">
+            <ArrowLeft size={18} className="shrink-0" />
+            <span className="min-w-0">
+              <span className="block text-[11px] font-bold uppercase">Anterior</span>
+              <span className="block truncate font-semibold text-bosque">{prev.label}</span>
+            </span>
+          </Link>
+        ) : (
+          <span className="flex-1" />
+        )}
+        <span className="hidden self-center text-xs font-bold text-gris sm:block">
+          {i === 0 ? 'Recorrido' : `Paso ${i} de ${FLOW.length - 1}`}
+        </span>
+        {next && (
+          <Link to={next.path} className="flex min-w-0 flex-1 items-center justify-end gap-2 rounded-xl bg-bosque px-4 py-2 text-right text-sm text-white hover:bg-bosque/90">
+            <span className="min-w-0">
+              <span className="block text-[11px] font-bold uppercase text-lima">Siguiente</span>
+              <span className="block truncate font-semibold">
+                {next.icon} {next.label}
+              </span>
+            </span>
+            <ArrowRight size={18} className="shrink-0 text-lima" />
+          </Link>
+        )}
+      </div>
+    </nav>
   )
 }
 

@@ -3,7 +3,7 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { ArrowDownRight, ArrowUpRight, Minus, Factory } from 'lucide-react'
 import { BaseMap, TorreMarkers, HubMarker, CUAD_PALETTE } from '../components/MapKit'
 import { Polyline } from 'react-leaflet'
-import { NeedResult, ScreenHeader, SimBadge, Tag, fmtInt, fmtMs, fmtNum, fmtPct } from '../components/ui'
+import { More, NeedResult, ScreenHeader, SimBadge, Tag, fmtInt, fmtMs, fmtNum, fmtPct } from '../components/ui'
 import { LevelPicker, WeekdayPicker } from './Planner'
 import { fmtTime } from '../sim/geo'
 import { TARGETS } from '../sim/params'
@@ -138,8 +138,9 @@ function CompareInner() {
   return (
     <div className={running ? 'opacity-80 transition' : 'transition'}>
       <ScreenHeader
-        kicker="P7 · Gerencia / Jurado"
-        title="Comparador: Hoy vs Tablero f. vs TORRE f."
+        kicker="📊 Resultados"
+        title="Hoy vs TORRE f."
+        hint="Mismos pedidos, 3 formas de armar rutas. Mueve los controles y mira qué cambia."
         right={
           <>
             <SimBadge />
@@ -221,10 +222,9 @@ function CompareInner() {
               })}
             </tbody>
           </table>
-          <p className="mt-2 text-[11px] text-gris">
-            Verde = cumple la meta del reto · ámbar = a menos de 10% · flechas = mejora o empeora frente a "Hoy". *Hoy las rutas se arman por orden de llegada; el costo real es la
+          <More label="¿Cómo leer la tabla?" className="mt-2 text-xs">Verde = cumple la meta del reto · ámbar = a menos de 10% · flechas = mejora o empeora frente a "Hoy". *Hoy las rutas se arman por orden de llegada; el costo real es la
             geocodificación manual. Proxy OTD = pedido con ETA antes del fin de su turno (06–11, 12–17, 18–21).
-          </p>
+          </More>
         </div>
 
         <div className="space-y-4">
@@ -254,9 +254,9 @@ function CompareInner() {
               <Factory size={16} /> Lo que NO resuelve
             </h3>
             <p className="mt-1 text-sm">
-              La capacidad física del HUB ({params.hubCapacityPerHour} ped/h) no aumenta. Con {fmtInt(result.orders.filter((o) => o.wave === 3).length)} pedidos en la oleada de 02:30,
-              la clasificación termina a las <b className={sc.A.kpis.sortEnd > 360 ? 'text-naranja' : 'text-bosque'}>{fmtTime(sc.A.kpis.sortEnd)}</b>
-              {sc.A.kpis.sortEnd > 360 ? ' — después de la salida de las 06:00.' : '.'} La Torre solo lo desacopla: el HUB carga pocos camiones primero y las motos no esperan en VES.
+              El HUB sigue clasificando {params.hubCapacityPerHour} ped/h: termina a las{' '}
+              <b className={sc.A.kpis.sortEnd > 360 ? 'text-naranja' : 'text-bosque'}>{fmtTime(sc.A.kpis.sortEnd)}</b>
+              {sc.A.kpis.sortEnd > 360 ? ', después de que salen las motos (06:00).' : '.'}
             </p>
             <div className="mt-2">
               <Tag kind="RETO">700 ped/h · oleadas 15/25/60%</Tag>

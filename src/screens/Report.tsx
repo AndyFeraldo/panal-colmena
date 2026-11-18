@@ -41,7 +41,7 @@ function ReportInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="P9 · Reporte de cierre y aprendizaje" title={`Cierre del día simulado · ${WEEKDAYS[result.input.weekday]} · ${result.input.level}`} right={<SimBadge />}>
+      <ScreenHeader kicker="🧠 Resultados · aprendizaje" title={`Cierre del día · ${WEEKDAYS[result.input.weekday]}`} hint="Qué cuadrantes ajustar la próxima semana, y por qué." right={<SimBadge />}>
         Con los webhooks de entrega (tiempos reales por parada), el Tablero f. propone ajustes medibles para la próxima semana y muestra qué cambió y por qué.
       </ScreenHeader>
 

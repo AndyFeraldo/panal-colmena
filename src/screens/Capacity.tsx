@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Bike, Factory, Loader2, Truck } from 'lucide-react'
-import { NeedResult, ScreenHeader, SimBadge, Tag, TorreLogo, fmtInt, fmtNum, fmtPct } from '../components/ui'
+import { More, NeedResult, ScreenHeader, SimBadge, Tag, TorreLogo, fmtInt, fmtNum, fmtPct } from '../components/ui'
 import { WeekdayPicker } from './Planner'
 import { fmtTime } from '../sim/geo'
 import { TARGETS, WEEKDAYS } from '../sim/params'
@@ -34,8 +34,9 @@ function CapacityInner() {
   return (
     <div>
       <ScreenHeader
-        kicker="Gerencia · capacidad"
-        title="¿Cuántas motos y camiones necesito en un día normal y en Cyber?"
+        kicker="📊 Resultados · capacidad"
+        title="¿Cuántas motos y camiones necesito?"
+        hint="Día normal vs Cyber, con los mismos supuestos."
         right={
           <>
             <WeekdayPicker />
@@ -115,10 +116,7 @@ function CapacityInner() {
                   ))}
                 </tbody>
               </table>
-              <p className="mt-2 text-[11px] text-gris">
-                Motos = máximo de rutas en un mismo turno (06–11, 12–17, 18–21). TORRE f. puede necesitar <b>más rutas</b> que hoy porque ninguna pasa de {params.cuadMaxStops}{' '}
-                paquetes; a cambio, menos km vacíos y más pedidos a tiempo. HUB en naranja = termina de clasificar después de las 06:00 (no lo resuelve TORRE f.).
-              </p>
+              <More label="¿Cómo se calcula?" className="mt-2 text-xs">Motos = máximo de rutas en un mismo turno (06–11, 12–17, 18–21). TORRE f. puede necesitar <b>más rutas</b> que hoy porque ninguna pasa de {params.cuadMaxStops} paquetes; a cambio, menos km vacíos y más pedidos a tiempo. HUB en naranja = termina de clasificar después de las 06:00 (no lo resuelve TORRE f.).</More>
             </div>
             <div className="card p-4">
               <h3 className="text-sm font-extrabold text-bosque">Motos y camiones por nivel de demanda</h3>
@@ -146,12 +144,7 @@ function CapacityInner() {
 
           {normal && cyber && (
             <div className="mt-4 rounded-2xl border-2 border-dashed border-turq bg-white p-4 text-sm text-bosque">
-              <b>Lectura rápida:</b> pasar de un día Normal a Cyber necesita{' '}
-              <b>
-                +{cyber.motosTorre - normal.motosTorre} motos y +{cyber.trucks - normal.trucks} camiones
-              </b>{' '}
-              en el turno pico. Como los cuadrantes ya están calculados para Cyber, el plan se conoce <b>de día</b>: el proveedor puede reservar esas unidades con
-              anticipación en vez de enterarse a las 02:30.
+              <b>De Normal a Cyber:</b> +{cyber.motosTorre - normal.motosTorre} motos y +{cyber.trucks - normal.trucks} camiones. Se sabe <b>de día</b>, así el proveedor los reserva con tiempo.
             </div>
           )}
         </div>

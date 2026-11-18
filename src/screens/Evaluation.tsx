@@ -247,8 +247,9 @@ function EvaluationInner() {
   return (
     <div>
       <ScreenHeader
-        kicker="Gerencia · evaluación honesta"
-        title="¿Cada pieza responde al reto y a lo que nos contaron?"
+        kicker="📊 Resultados · evaluación"
+        title="¿Responde al reto?"
+        hint="Cada exigencia del reto y de la entrevista, con su veredicto."
         right={<SimBadge />}
       >
         Cada fila es una exigencia de las bases o un insight de la entrevista, con la pieza de TORRE f. que lo atiende y la evidencia que sale <b>de esta simulación</b>. Si algo
@@ -306,10 +307,7 @@ function EvaluationInner() {
           </tbody>
         </table>
       </div>
-      <p className="mt-2 text-[11px] text-gris">
-        Los veredictos de las metas (SPR, OTD, carga) se recalculan con cada cambio de supuestos. Parcial = mejora frente a hoy pero no llega a la meta, o depende de validar algo
-        con Falabella.
-      </p>
+      <p className="mt-2 text-[11px] text-gris">◐ Parcial = mejora frente a hoy, pero no llega a la meta o falta validarlo con Falabella.</p>
     </div>
   )
 }

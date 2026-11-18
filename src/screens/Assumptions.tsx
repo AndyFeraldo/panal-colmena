@@ -37,8 +37,9 @@ export default function Assumptions() {
   return (
     <div>
       <ScreenHeader
-        kicker="P10 · Supuestos y fuentes"
-        title="Qué es dato, qué es insight y qué es supuesto"
+        kicker="⚙️ Supuestos y fuentes"
+        title="Qué es dato y qué es supuesto"
+        hint="Cambia cualquier número y toda la simulación se recalcula."
         right={
           <button onClick={resetParams} className="btn-ghost" disabled={changed === 0}>
             <RotateCcw size={16} /> Restaurar valores {changed > 0 && `(${changed} cambiado${changed > 1 ? 's' : ''})`}
@@ -127,10 +128,10 @@ export default function Assumptions() {
         </div>
 
         <div className="space-y-4">
-          <div className="card p-4">
-            <h3 className="flex items-center gap-2 font-extrabold text-bosque">
-              Datos del reto <Tag kind="RETO" />
-            </h3>
+          <details className="card group p-4">
+            <summary className="flex cursor-pointer list-none items-center gap-2 font-extrabold text-bosque">
+              ▸ Datos del reto <Tag kind="RETO" />
+            </summary>
             <dl className="mt-2 space-y-1.5 text-sm">
               {RETO_FACTS.map(([k, v]) => (
                 <div key={k}>
@@ -139,20 +140,20 @@ export default function Assumptions() {
                 </div>
               ))}
             </dl>
-          </div>
-          <div className="card p-4">
-            <h3 className="flex items-center gap-2 font-extrabold text-bosque">
-              Insights de la entrevista <Tag kind="ENTREVISTA" />
-            </h3>
+          </details>
+          <details className="card p-4">
+            <summary className="flex cursor-pointer list-none items-center gap-2 font-extrabold text-bosque">
+              ▸ Insights de la entrevista <Tag kind="ENTREVISTA" />
+            </summary>
             <ul className="mt-2 space-y-1.5 text-sm">
               {INSIGHTS.map((x) => (
                 <li key={x}>• {x}</li>
               ))}
             </ul>
             <p className="mt-2 text-[11px] text-gris">Resumen anonimizado; no se publican nombres ni la grabación.</p>
-          </div>
-          <div className="card p-4 text-sm">
-            <h3 className="font-extrabold text-bosque">Fuentes</h3>
+          </details>
+          <details className="card p-4 text-sm">
+            <summary className="cursor-pointer list-none font-extrabold text-bosque">▸ Fuentes</summary>
             <ul className="mt-2 space-y-1 text-xs">
               <li>• Bases y PPT oficiales de la Innovathon Ulima × Saga Falabella 2026.</li>
               <li>• Entrevista grupal con el equipo de Falabella (14/11/2026), anonimizada.</li>
@@ -160,7 +161,7 @@ export default function Assumptions() {
               <li>• Casillas en rombo: cuadrícula propia del equipo. Mapas: Google Maps (si hay clave) o © colaboradores de OpenStreetMap.</li>
               <li>• API pública de SimpliRoute: documentation.simpliroute.com/es (integración simulada).</li>
             </ul>
-          </div>
+          </details>
         </div>
       </div>
     </div>

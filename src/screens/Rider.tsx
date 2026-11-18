@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Bike, Info, PackageX, RefreshCw } from 'lucide-react'
+import { Bike, PackageX, RefreshCw } from 'lucide-react'
 import { Marker, Polyline } from 'react-leaflet'
 import { BaseMap, FitTo, HubMarker, RouteLine, torreIcon } from '../components/MapKit'
-import { NeedResult, PhoneFrame, ScreenHeader, SimBadge, fmtNum } from '../components/ui'
+import { More, NeedResult, PhoneFrame, ScreenHeader, SimBadge, fmtNum } from '../components/ui'
 import { anaContext } from '../components/demoSteps'
 import { HUB, type LatLng } from '../sim/data'
 import { fmtTime, roadKm } from '../sim/geo'
@@ -58,14 +58,14 @@ function RiderInner() {
   const kmTorre = nearest ? roadKm(emptyAt, nearest, params.detourFactor) : Infinity
   const kmHub = roadKm(emptyAt, HUB, params.detourFactor)
   const goTorre = nearest && kmTorre < kmHub
-  const isCarlos = route.id === ctx?.route?.id
   const pctFull = Math.min(1, deliveries.length / max)
 
   return (
     <div>
       <ScreenHeader
-        kicker="P5 · Motorizado · vista genérica ilustrativa"
+        kicker="🛵 Motorizado · vista ilustrativa"
         title={`${route.rider}, cuadrante ${route.label}`}
+        hint="Prueba el botón “Me quedé sin paquetes”."
         right={<SimBadge />}
       >
         El motorizado usa la <b>app de ruteo de siempre</b>. Aquí solo mostramos lo que cambia: su cuadrante tiene <b>máximo {max} paquetes</b>, empieza en su Torre y, si se
@@ -220,15 +220,13 @@ function RiderInner() {
           </div>
           {reload && (
             <div className="rounded-2xl bg-naranja-soft p-4 text-sm text-bosque">
-              <b>~{fmtTime(reload.eta)}:</b> a {isCarlos ? 'Carlos' : route.rider} se le llena el límite de la mochila ({params.backpackDm3} dm³). Se reabastece en la Torre en{' '}
-              {params.reloadMinutes} min y sigue. Sin Torre tendría que volver ~{Math.round(roadKm(reload, HUB, params.detourFactor))} km hasta Villa El Salvador.
+              <b>↻ {fmtTime(reload.eta)}:</b> se reabastece en la Torre ({params.reloadMinutes} min). Sin Torre: volver ~{Math.round(roadKm(reload, HUB, params.detourFactor))} km a VES.
             </div>
           )}
-          <div className="flex items-start gap-2 rounded-2xl bg-white p-4 text-xs text-gris">
-            <Info size={16} className="shrink-0 text-turq" />
+          <More label="ℹ️ Sobre esta vista">
             Vista ilustrativa: el motorizado usa la app de SimpliRoute de siempre; aquí solo mostramos qué cambia. El orden de paradas simula la optimización de SimpliRoute
             (vecino más cercano + 2-opt). El botón “Me quedé sin paquetes” es una propuesta para validar con Falabella.
-          </div>
+          </More>
         </div>
       </div>
     </div>

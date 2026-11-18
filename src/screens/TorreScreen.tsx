@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Camera, CheckCircle2, MapPin, ShieldCheck, XCircle } from 'lucide-react'
-import { NeedResult, PhoneFrame, ScreenHeader, Tag, fmtPct } from '../components/ui'
+import { More, NeedResult, PhoneFrame, ScreenHeader, Tag, fmtPct } from '../components/ui'
 import { anaContext } from '../components/demoSteps'
 import { fmtTime } from '../sim/geo'
 import { useSim } from '../store/useSim'
@@ -50,7 +50,7 @@ function TorreInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="P4 · Encargado de la Torre · 05:30–21:00 · en el celular" title="La Torre: el camión que reabastece en el punto medio de sus cuadrantes">
+      <ScreenHeader kicker="♜ Encargado de la Torre · 05:30–21:00" title="La Torre reabastece a las motos" hint="Escanea cada bolsa que entregas. Si es la equivocada, salta una alerta.">
         Un camión del proveedor de transporte sale del HUB con las bolsas de sus cuadrantes ({col.letter}1, {col.letter}2…) y se estaciona en el punto medio de ellos. Las motos recogen y se
         reabastecen aquí: "me quedé sin paquetes" → voy a mi Torre, no vuelvo al almacén de Villa El Salvador.
       </ScreenHeader>
@@ -150,7 +150,7 @@ function TorreInner() {
             <h3 className="flex items-center gap-2 font-extrabold text-bosque">
               <ShieldCheck size={18} className="text-verde" /> Doble control para el 99,9% de carga
             </h3>
-            <ol className="mt-2 space-y-1.5 text-sm">
+            <More label="¿Cómo funciona el doble control?" className="mt-1 !bg-crema"><ol className="space-y-1.5">
               <li>
                 <b>1. HUB:</b> carga pocos camiones (no decenas de motos) con bolsas etiquetadas por cuadrante.
               </li>
@@ -160,20 +160,19 @@ function TorreInner() {
               <li>
                 <b>3. Reabastecer:</b> la 2.ª bolsa del día se entrega aquí mismo, a minutos del cuadrante (el “enroque”).
               </li>
-            </ol>
+            </ol></More>
             <div className="mt-3 flex flex-wrap gap-1">
               <Tag kind="ENTREVISTA">Idea nacida en la entrevista: "una unidad que alimente a la moto"</Tag>
               <Tag kind="SUPUESTO">Error 0,5% manual vs 0,05% escaneo</Tag>
             </div>
           </div>
-          <div className="card p-5 text-sm">
-            <h3 className="font-extrabold text-bosque">En SimpliRoute la Torre es…</h3>
+          <More label="¿Y en SimpliRoute qué es la Torre?" className="card">
             <p className="mt-1">
               <b>un vehículo + un punto de inicio (depot)</b>. Las rutas de estos cuadrantes empiezan aquí y el reabastecimiento es una 2.ª ruta del día desde la Torre. No se cambia
               de sistema.
             </p>
             <p className="mt-2 text-xs text-gris">Por validar con Falabella: ¿quién paga el camión? (proveedor de transporte) · ¿qué puntos usar? (tiendas / estacionamientos)</p>
-          </div>
+          </More>
         </div>
       </div>
     </div>

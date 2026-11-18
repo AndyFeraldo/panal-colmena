@@ -121,8 +121,9 @@ function HubInner() {
   return (
     <div>
       <ScreenHeader
-        kicker="P3 · Jefe de HUB / proveedor de transporte · de noche"
-        title="02:30 — nadie decide nada, solo se clasifica"
+        kicker="🏭 Jefe de HUB · 02:30"
+        title="Nadie decide nada: solo se clasifica"
+        hint="Presiona ▶ Reproducir la noche y mira cómo cae cada pedido en su cuadrante."
         right={
           <>
             <SimBadge />
@@ -241,8 +242,7 @@ function HubInner() {
                 ))}
               </div>
               <div className="mt-3 rounded-xl border border-naranja/40 bg-naranja-soft p-3 text-xs text-bosque">
-                <b>Lo que NO resuelve:</b> el HUB sigue clasificando a {params.hubCapacityPerHour} ped/h. Con {fmtInt(orders.filter((o) => o.wave === 3).length)} pedidos en la oleada de 02:30, termina
-                a las <b>{fmtTime(C.kpis.sortEnd)}</b>. El Tablero f. solo cambia el <i>orden</i>: primero lo que viaja más lejos. <Tag kind="RETO">700 ped/h</Tag>
+                <b>Lo que NO resuelve:</b> el HUB clasifica {params.hubCapacityPerHour} ped/h y termina a las <b>{fmtTime(C.kpis.sortEnd)}</b>. <Tag kind="RETO">700 ped/h</Tag>
               </div>
             </div>
           </div>

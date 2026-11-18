@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NeedResult, PhoneFrame, ScreenHeader, Tag } from '../components/ui'
+import { More, NeedResult, PhoneFrame, ScreenHeader, Tag } from '../components/ui'
 import { anaContext } from '../components/demoSteps'
 import { fmtTime } from '../sim/geo'
 import { useSim } from '../store/useSim'
@@ -42,7 +42,7 @@ function DeliveryInner() {
 
   return (
     <div>
-      <ScreenHeader kicker="P6 · Cliente · día de la entrega" title="Ana sabe cuándo llega su pedido">
+      <ScreenHeader kicker="💬 Cliente · día de la entrega" title="Ana sabe cuándo llega" hint="Antes: “de 8 a 8”. Ahora: una ventana de 2 horas.">
         Mismo canal de mensajes de hoy (vista genérica, no es la interfaz real de ninguna app). Solo se suma un mensaje: la ventana de 2 horas calculada con el ETA de la ruta
         optimizada.
       </ScreenHeader>
@@ -76,7 +76,7 @@ function DeliveryInner() {
             <div className="card border-l-4 border-naranja p-5">
               <div className="text-[11px] font-bold uppercase text-naranja">Hoy</div>
               <div className="text-3xl font-extrabold text-bosque">"de 8 a 8"</div>
-              <div className="text-sm text-gris">Ventana de 12 horas. "La visibilidad del cliente no es buena."</div>
+              <div className="text-sm text-gris">Ventana de 12 horas</div>
               <div className="mt-2">
                 <Tag kind="ENTREVISTA" />
               </div>
@@ -94,14 +94,11 @@ function DeliveryInner() {
               </div>
             </div>
           </div>
-          <div className="card p-5 text-sm">
-            <h3 className="font-extrabold text-bosque">¿Por qué importa?</h3>
-            <ul className="mt-2 space-y-1.5">
+          <More label="¿Por qué importa?"><ul className="space-y-1.5">
               <li>• El cliente está en casa a la hora correcta → menos "cliente no estaba" y menos reintentos.</li>
               <li>• Se envía por el canal que ya existe ("salió a ruta" y "eres el siguiente" ya se usan).</li>
               <li>• La ventana sale del ETA de la ruta optimizada: es un cálculo, no una promesa al aire.</li>
-            </ul>
-          </div>
+            </ul></More>
         </div>
       </div>
     </div>

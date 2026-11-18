@@ -94,7 +94,6 @@ function AdminInner() {
   const spillIn = C.spills.filter((s) => s.to === selected)
   const spilled = spillOut.reduce((s, x) => s + x.orders, 0)
   const spillOn = selected ? (useSpill[selected] ?? spilled > 0) : false
-  const systemSplit = C.splits.find((s) => s.cuadId === selected)
 
   // Paquetes que se queda este cuadrante (si pasa los sobrantes al vecino, se quitan los más cercanos al vecino)
   const kept = useMemo(() => {
@@ -139,11 +138,6 @@ function AdminInner() {
     })
   }, [sel, kept, k, C, torres, params])
 
-  const extraRiders = Object.entries(riders).reduce((s, [id, n]) => {
-    const auto = Math.max(1, Math.ceil((byCuad.get(id)?.length ?? 0) / max))
-    return s + Math.max(0, n - auto)
-  }, 0)
-
   const send = async () => {
     if (!sel) return
     const e = await routingProvider.splitZone(
@@ -160,8 +154,9 @@ function AdminInner() {
   return (
     <div>
       <ScreenHeader
-        kicker="Panel del administrador · de noche, antes de que salgan las motos"
-        title="¿Un cuadrante pasa de 50? Se reparte, no se sobrecarga"
+        kicker="⚖️ Administrador · de noche"
+        title="¿Más de 50 paquetes? Se reparte"
+        hint="Elige un cuadrante en naranja y decide: pasarlo al vecino o sumar un motorizado."
         right={
           <>
             <LevelPicker />
@@ -214,9 +209,6 @@ function AdminInner() {
           <div className="flex flex-wrap gap-1">
             <Tag kind="DISEÑO">Tope de 50 = meta SPR del reto</Tag>
             <Tag kind="SUPUESTO">Pedidos sintéticos de una noche</Tag>
-            <span className="text-[11px] text-gris">
-              Motorizados extra agregados a mano: <b className="text-bosque">{extraRiders}</b>
-            </span>
           </div>
         </div>
 
@@ -283,10 +275,7 @@ function AdminInner() {
                     </button>
                   </div>
                 </div>
-                <p className="mt-1 text-[11px] text-gris">
-                  Se queda con {kept.length} paquetes → mínimo {minRiders} motorizado(s) para no pasar de {max}. Se parte por zona: cada uno toma un lado del cuadrante.
-                  {systemSplit && ` El sistema propuso ${systemSplit.parts.length}.`}
-                </p>
+                <p className="mt-1 text-[11px] text-gris">{kept.length} paquetes → mínimo {minRiders} motorizado(s). Cada uno toma un lado del cuadrante.</p>
                 <div className="mt-2 space-y-1.5">
                   {plan.map((p, j) => (
                     <div key={j} className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-2 text-xs">
@@ -309,7 +298,7 @@ function AdminInner() {
               <button onClick={send} className="btn-turq mt-3 w-full">
                 <Send size={16} /> Enviar reparto a SimpliRoute
               </button>
-              <p className="mt-1 text-center text-[10px] text-gris">ETA calculado con los supuestos (sin dificultad por casilla) · llamada simulada</p>
+              
             </div>
           )}
 
@@ -350,7 +339,7 @@ function AdminInner() {
                 </p>
               )}
             </div>
-            <p className="mt-2 text-[11px] text-gris">La línea vertical marca el tope de {max}. Naranja = pasa de 50 · amarillo = entre 46 y 50.</p>
+            <p className="mt-2 text-[11px] text-gris">│ = tope de {max} · naranja = se pasa</p>
           </div>
         </div>
       </div>
