@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Camera, CheckCircle2, MapPin, ShieldCheck, XCircle } from 'lucide-react'
+import { ArrowRightLeft, Camera, CheckCircle2, MapPin, ShieldCheck, XCircle } from 'lucide-react'
 import { More, NeedResult, PhoneFrame, ScreenHeader, Tag, fmtPct } from '../components/ui'
 import { anaContext } from '../components/demoSteps'
-import { fmtTime } from '../sim/geo'
+import { fmtTime, haversineKm } from '../sim/geo'
 import { useSim } from '../store/useSim'
 
 export default function TorreScreen() {
@@ -30,6 +30,7 @@ function TorreInner() {
   const [scanned, setScanned] = useState<Record<string, boolean>>({})
   const [last, setLast] = useState<ScanResult>(null)
   const [errorsCaught, setErrorsCaught] = useState(0)
+  const [shared, setShared] = useState<string | null>(null)
 
   if (!col || !trip) return <div className="card p-6">No hay Torres activas en este escenario.</div>
 
@@ -47,6 +48,12 @@ function TorreInner() {
     setLast({ ok: false, text: `Esta bolsa es de ${other.label}, no de ${r.label}. No la entregues a ${r.rider}.` })
   }
   const done = routes.length - pending.length
+  // Torre vecina más cercana: puede pasarle bolsas a esta (o recibirlas) para que ninguna moto se quede parada
+  const neighbor = used
+    .filter((c) => c.id !== col.id)
+    .map((c) => ({ c, km: haversineKm(c, col) }))
+    .sort((a, b) => a.km - b.km)[0]
+  const transferMin = neighbor ? Math.round((neighbor.km * params.detourFactor * 60) / params.truckSpeedKmh) : 0
 
   return (
     <div>
@@ -146,6 +153,43 @@ function TorreInner() {
               <div className="text-xs opacity-80">vs {fmtPct(1 - params.loadErrorManual, 1)} carga manual</div>
             </div>
           </div>
+          {neighbor && (
+            <div className="card p-5">
+              <h3 className="flex items-center gap-2 font-extrabold text-bosque">
+                <ArrowRightLeft size={18} className="text-turq" /> Una Torre ayuda a otra
+              </h3>
+              <p className="mt-1 text-sm text-bosque/80">
+                Si a una Torre le sobran paquetes y a la vecina le sobran motos, se pasan bolsas entre ellas. Así ninguna moto se queda parada y nadie vuelve a VES.
+              </p>
+              <div className="mt-3 grid items-center gap-2 sm:grid-cols-[1fr_auto_1fr]">
+                <div className="rounded-xl bg-naranja-soft p-3 text-sm">
+                  <div className="font-extrabold text-bosque">♜ {neighbor.c.letter} · {neighbor.c.short}</div>
+                  <div className="text-xs text-bosque/80">le sobran 2 bolsas (día alto)</div>
+                </div>
+                <div className="text-center text-xs font-bold text-turq">
+                  {neighbor.km.toFixed(1).replace('.', ',')} km
+                  <br />~{transferMin} min
+                </div>
+                <div className="rounded-xl bg-lima-soft p-3 text-sm">
+                  <div className="font-extrabold text-bosque">♜ {col.letter} · {col.short}</div>
+                  <div className="text-xs text-bosque/80">tiene motos libres después del turno 1</div>
+                </div>
+              </div>
+              {shared === col.id ? (
+                <div className="anim-pop mt-3 rounded-xl bg-lima-soft p-3 text-sm font-semibold text-bosque">
+                  ✓ 2 bolsas pasan de la Torre {neighbor.c.letter} a la Torre {col.letter} en ~{transferMin} min. Las motos de {col.short} siguen trabajando y las de{' '}
+                  {neighbor.c.short} no se atrasan.
+                </div>
+              ) : (
+                <button onClick={() => setShared(col.id)} className="btn-turq mt-3 w-full !py-2.5">
+                  <ArrowRightLeft size={16} /> Aprobar: pasar 2 bolsas a la Torre {col.letter}
+                </button>
+              )}
+              <div className="mt-2">
+                <Tag kind="SUPUESTO">Ejemplo ilustrativo · distancia real entre Torres simuladas</Tag>
+              </div>
+            </div>
+          )}
           <div className="card p-5">
             <h3 className="flex items-center gap-2 font-extrabold text-bosque">
               <ShieldCheck size={18} className="text-verde" /> Doble control para el 99,9% de carga

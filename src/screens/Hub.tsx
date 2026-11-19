@@ -45,7 +45,7 @@ function HubInner() {
   const C = result.scenarios.C
 
   useEffect(() => {
-    if (demoStep === 3) {
+    if (demoStep === 4) {
       setIdx(0)
       setMeasured(null)
       setPlaying(true)

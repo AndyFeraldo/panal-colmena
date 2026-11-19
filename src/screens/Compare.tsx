@@ -140,7 +140,7 @@ function CompareInner() {
       <ScreenHeader
         kicker="📊 Resultados"
         title="Hoy vs TORRE f."
-        hint="Mismos pedidos, 3 formas de armar rutas. Mueve los controles y mira qué cambia."
+        hint="Primero, lo que gana el cliente. Abajo, el detalle para la operación: mismos pedidos, 3 formas de armar rutas."
         right={
           <>
             <SimBadge />
@@ -148,6 +148,25 @@ function CompareInner() {
           </>
         }
       />
+
+      {/* LO QUE GANA EL CLIENTE: va primero (foco pedido por Saga en mentoría) */}
+      <div className="card-dark mb-4 p-4 md:p-5">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="text-lg font-extrabold text-lima md:text-xl">Lo que gana el cliente</h2>
+          <span className="text-xs text-white/70">Hoy → con TORRE f.</span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
+          <BeforeAfter label="Ventana de espera" before={`${sc.A.kpis.windowHours} h`} after={`${sc.C.kpis.windowHours} h`} note={'"de 8 a 8" → "entre 9 y 11"'} />
+          <BeforeAfter label="Pedidos a tiempo" before={fmtPct(sc.A.kpis.otd, 0)} after={fmtPct(sc.C.kpis.otd, 0)} note="meta del reto: 96%" />
+          <BeforeAfter label="Si no está en casa" before="1–2 días" after="mismo día" note="dato de mentoría, por validar" />
+          <BeforeAfter
+            label="Km sin entregar"
+            before={fmtInt(sc.A.kpis.emptyKm)}
+            after={`−${Math.round((1 - sc.C.kpis.emptyKm / sc.A.kpis.emptyKm) * 100)}%`}
+            note="motos que no vuelven a VES"
+          />
+        </div>
+      </div>
 
       <div className="card mb-4 grid gap-4 p-4 md:grid-cols-3 xl:grid-cols-[auto_repeat(5,minmax(0,1fr))]">
         <div className="space-y-2">
@@ -314,6 +333,19 @@ function SmallBar({ title, data, domain }: { title: string; data: Record<string,
           </BarChart>
         </ResponsiveContainer>
       </div>
+    </div>
+  )
+}
+
+function BeforeAfter({ label, before, after, note }: { label: string; before: string; after: string; note: string }) {
+  return (
+    <div className="rounded-xl bg-white/10 p-3">
+      <div className="text-[11px] font-bold uppercase tracking-wide text-white/70">{label}</div>
+      <div className="mt-1 flex flex-wrap items-baseline gap-x-2">
+        <span className="text-base font-bold text-white/60 line-through decoration-naranja decoration-2">{before}</span>
+        <span className="text-2xl font-extrabold text-lima md:text-3xl">{after}</span>
+      </div>
+      <div className="text-[11px] text-white/70">{note}</div>
     </div>
   )
 }

@@ -18,7 +18,8 @@ export function anaContext(r: SimResult | null) {
   const cuadrante = r.map.cuadrantes.find((p) => p.id === cuadId)
   const torre = r.torres.find((c) => c.id === route?.depotId) ?? r.torres.find((c) => c.id === cuadrante?.torreId)
   const eta = stop?.eta ?? 9 * 60 + 40
-  const winStart = Math.floor((eta - 30) / 60) * 60
+  // ventana de 2 h que nunca empieza antes de que salga la ruta
+  const winStart = Math.max(Math.floor((eta - 30) / 60) * 60, Math.ceil((route?.startTime ?? 360) / 60) * 60)
   return { route, stop, cuadId, cuadrante, torre, eta, winStart, winEnd: winStart + 120 }
 }
 
@@ -32,56 +33,46 @@ export function demoSteps(r: SimResult | null): DemoStep[] {
   const trip = r?.scenarios.C.torreTrips.find((t) => t.torreId === a?.torre?.id)
   return [
     {
+      path: '/cliente/entrega',
+      title: '1 · Ana sabe a qué hora llega',
+      text: `Hoy Falabella le dice a Ana "llega de 8 a 8". Con TORRE f. recibe por el WhatsApp de siempre: "llega hoy entre ${fmtTime(a?.winStart ?? 540)} y ${fmtTime(a?.winEnd ?? 660)}". Y si no está, lo cambia el mismo día.`,
+    },
+    {
       path: '/',
-      title: '1 · El problema',
-      text: 'El 60% de los pedidos llega al HUB a las 02:30 y la primera moto sale a las 06:00: 3,5 horas para sectorizar con la regla "primeros 50 del distrito" y muchas direcciones sin coordenadas.',
+      title: '2 · Por qué hoy no se puede',
+      text: 'El 60% de los pedidos llega al HUB a las 02:30 y la primera moto sale a las 06:00: 3,5 horas para armar rutas con la regla "primeros 50 del distrito".',
     },
     {
       path: '/cliente/checkout',
-      title: '2 · Ana compra con Pin f.',
-      text: `Jueves 21:00. Ana arrastra el pin hasta su puerta en Miraflores. Su pedido nace con lat/long y ya sabe su casilla, su cuadrante (${cuadrante}) y su Torre (${a?.torre?.letter ?? 'A'}).`,
+      title: '3 · Cada pedido tiene su casilla',
+      text: `Al comprar, el pedido nace con su ubicación (y si la dirección es dudosa, Ana marca su puerta con un toque). Al instante sabe su cuadrante (${cuadrante}) y su Torre.`,
     },
     {
       path: '/planificador',
-      title: '3 · De día se ordena',
-      text: `En el Tablero f., el planificador ve el mapa de calor y ${r?.map.cuadrantes.length ?? 110} cuadrantes que cruzan distritos (máximo 50 paquetes cada uno) y los publica en SimpliRoute como Zonas.`,
+      title: '4 · De día se ordena',
+      text: `El planificador ve Lima como un tablero: ${r?.map.cuadrantes.length ?? 110} cuadrantes de máximo 50 paquetes, que no cruzan la Panamericana ni los ríos.`,
     },
     {
       path: '/hub',
-      title: '4 · 02:30: nadie decide nada',
-      text: `Llega la oleada grande. ${n} pedidos se asignan a su cuadrante en ${ms} ms. El HUB solo clasifica bolsas por cuadrante y carga los camiones Torre.`,
-    },
-    {
-      path: '/admin',
-      title: '5 · ¿Más de 50? El admin decide',
-      text: 'Si un cuadrante pasa de 50 paquetes, el administrador pasa los sobrantes a un vecino con espacio o asigna un 2.º motorizado en el mismo cuadrante: se parte por zona según los paquetes.',
+      title: '5 · De noche solo se ejecuta',
+      text: `02:30: ${n} pedidos asignados en ${ms} ms. El HUB solo clasifica bolsas y carga pocos camiones Torre.`,
     },
     {
       path: '/torre',
-      title: '6 · La Torre sale y escanea',
-      text: `${fmtTime(trip?.departure ?? 330)} sale el camión de la Torre ${a?.torre?.letter ?? 'A'} hacia el punto medio de sus cuadrantes (${col}). El encargado escanea cada bolsa que entrega a cada moto: doble control de carga.`,
+      title: '6 · Cada moto tiene su Torre',
+      text: `${fmtTime(trip?.departure ?? 330)} sale el camión Torre ${a?.torre?.letter ?? 'A'} y se estaciona en medio de sus cuadrantes (${col}). Escanea cada bolsa, y si a una Torre le sobran paquetes, se los pasa a la vecina.`,
     },
     {
       path: '/motorizado',
-      title: '7 · Carlos se reabastece cerca',
-      text: `Carlos empieza su ruta en la Torre ${col}, no en Villa El Salvador. "Me quedé sin paquetes" → va a su Torre, a minutos de su cuadrante. No volvemos al almacén.`,
-    },
-    {
-      path: '/cliente/entrega',
-      title: '8 · Ana sabe cuándo llega',
-      text: `En vez de "de 8 a 8", Ana recibe por el canal de siempre: "llega hoy entre ${fmtTime(a?.winStart ?? 540)} y ${fmtTime(a?.winEnd ?? 660)}".`,
+      title: '7 · Sin paquetes → a su Torre',
+      text: `Carlos empieza en la Torre ${col}, no en Villa El Salvador. Cuando se queda sin paquetes, recarga a minutos de su zona.`,
     },
     {
       path: '/gerencia',
-      title: '9 · Resultados',
+      title: '8 · Hoy vs TORRE f.',
       text: k
-        ? `Hoy vs TORRE f.: paradas por ruta ${k.A.kpis.spr.toFixed(0)} → ${k.C.kpis.spr.toFixed(0)}, km vacíos −${Math.round((1 - k.C.kpis.emptyKm / k.A.kpis.emptyKm) * 100)}%, pedidos a tiempo ${(k.A.kpis.otd * 100).toFixed(0)}% → ${(k.C.kpis.otd * 100).toFixed(0)}%. Todo simulado y editable.`
-        : 'Comparamos Hoy vs Tablero f. vs TORRE f. con los mismos pedidos.',
-    },
-    {
-      path: '/integracion',
-      title: '10 · Se conecta con SimpliRoute',
-      text: 'No es una app nueva: cuadrantes → Zonas, pedidos → Visitas, Torre → Vehículo + inicio, entregas → Webhooks para aprender. Se ordena de día, se ejecuta de noche.',
+        ? `Ventana de 12 h a 2 h, pedidos a tiempo ${(k.A.kpis.otd * 100).toFixed(0)}% → ${(k.C.kpis.otd * 100).toFixed(0)}%, km vacíos −${Math.round((1 - k.C.kpis.emptyKm / k.A.kpis.emptyKm) * 100)}%. Sin apps nuevas: usa SimpliRoute y WhatsApp. Para que cuando quieras comprar en línea, pienses en Falabella.`
+        : 'Comparamos Hoy vs TORRE f. con los mismos pedidos.',
     },
   ]
 }

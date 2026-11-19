@@ -67,7 +67,7 @@ function CheckoutInner() {
 
   // En el modo demo: Ana mueve el pin y confirma sola
   useEffect(() => {
-    if (demoStep !== 1) return
+    if (demoStep !== 2) return
     const t1 = setTimeout(() => setPos({ lat: ANA.lat, lng: ANA.lng }), 900)
     const t2 = setTimeout(() => setConfirmed(true), 2200)
     return () => {
