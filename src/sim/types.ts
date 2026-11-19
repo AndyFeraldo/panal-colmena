@@ -1,4 +1,4 @@
-import type { DemandLevel, Params, SizeKey } from './params'
+import type { DemandLevel, Params, SizeKey, TorreVehicle } from './params'
 import type { LatLng } from './data'
 
 export interface Order extends LatLng {
@@ -38,18 +38,39 @@ export interface Tablero {
   cellDistrict: Record<string, string>
 }
 
-/** Torre = camión reabastecedor estacionado en el punto medio de sus cuadrantes */
+/**
+ * Torre = vehículo reabastecedor MÓVIL (camión o van) que sale del HUB con las cajas ya armadas por moto,
+ * se cita con sus motos en el punto de encuentro (lat/lng = punto medio de sus cuadrantes) a horas fijas
+ * y entre citas va a la tienda Saga de su zona. No se queda estacionado en la calle.
+ */
 export interface Torre {
   id: string
   letter: string // A, B, C… (da nombre a sus cuadrantes)
   name: string
   short: string
-  lat: number
+  store: string // tienda Saga de la zona
+  storeLat: number
+  storeLng: number
+  lat: number // punto de encuentro con las motos
   lng: number
   cuadIds: string[]
   expLoad: number
-  trucks: number
+  trucks: number // cantidad de vehículos (camiones o vans)
+  vehicle: TorreVehicle
   distHubKm: number
+  savedKm: number // paquetes × km de moto ahorrados (para elegir dónde vale la pena una Torre)
+}
+
+/** Un tramo del día de la Torre */
+export interface TorreLeg {
+  time: number // minutos desde medianoche
+  kind: 'carga' | 'cita' | 'tienda' | 'regreso'
+  place: string
+  lat: number
+  lng: number
+  motos: number // motos que recogen caja en esta cita
+  boxes: number // cajas entregadas en esta cita
+  note: string
 }
 
 export interface CellMove {
@@ -129,6 +150,8 @@ export interface TorreTrip {
   arrival: number
   cuadIds: string[]
   secondTruckAlert: boolean
+  vehicle: TorreVehicle
+  itinerary: TorreLeg[]
 }
 
 export interface Kpis {

@@ -105,7 +105,7 @@ function SeasonsInner() {
                 <div className="flex flex-wrap items-center justify-between gap-2 px-2 pb-2 pt-1">
                   <span className={`chip ${chip} !text-sm`}>{label}</span>
                   <span className="text-xs font-semibold text-bosque">
-                    {fmtInt(sum.stops)} paquetes · {sum.n} rutas · {sum.trucks} camión(es) Torre
+                    {fmtInt(sum.stops)} paquetes · {sum.n} rutas · {sum.trucks} vehículo(s) Torre
                   </span>
                 </div>
                 <BaseMap className="h-[min(56vh,460px)]" zoom={12.5} center={CENTER}>

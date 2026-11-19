@@ -68,8 +68,8 @@ function RiderInner() {
         hint="Prueba el botón “Me quedé sin paquetes”."
         right={<SimBadge />}
       >
-        El motorizado usa la <b>app de ruteo de siempre</b>. Aquí solo mostramos lo que cambia: su cuadrante tiene <b>máximo {max} paquetes</b>, empieza en su Torre y, si se
-        queda sin paquetes, <b>se reabastece en la Torre, no vuelve al almacén</b>.
+        El motorizado usa la <b>app de ruteo de siempre</b>. Aquí solo mostramos lo que cambia: su cuadrante tiene <b>máximo {max} paquetes</b>, recoge su caja en la cita con su Torre y, si se
+        queda sin paquetes, <b>cambia la caja en la siguiente cita, no vuelve al almacén</b>.
       </ScreenHeader>
 
       <div className="mb-4 flex flex-wrap gap-1.5">

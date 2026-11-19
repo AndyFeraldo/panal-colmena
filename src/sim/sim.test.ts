@@ -17,8 +17,8 @@ describe('datos y geografía', () => {
   it('pesos de distrito normalizados a 100%', () => {
     expect(DISTRICTS.reduce((s, d) => s + d.weight, 0)).toBeCloseTo(1, 6)
   })
-  it('la dirección de Ana cae en Miraflores', () => {
-    expect(districtOf(ANA).name).toBe('Miraflores')
+  it('la dirección de Ana cae en Los Olivos', () => {
+    expect(districtOf(ANA).name).toBe('Los Olivos')
   })
 })
 
@@ -200,5 +200,38 @@ describe('barreras geográficas (Panamericana, Vía Expresa, ríos)', () => {
     const avgCells = (m: typeof bajo) => m.cuadrantes.reduce((s, q) => s + q.cells.length, 0) / m.cuadrantes.length
     expect(cyber.cuadrantes.length).toBeGreaterThan(bajo.cuadrantes.length)
     expect(avgCells(cyber)).toBeLessThan(avgCells(bajo))
+  })
+})
+
+describe('Torre móvil (mentoría 18-nov)', () => {
+  const r = runSimulation(input)
+  const trips = r.scenarios.C.torreTrips
+  it('solo 1–2 Torres, y ninguna cerca del HUB', () => {
+    expect(trips.length).toBeGreaterThan(0)
+    expect(trips.length).toBeLessThanOrEqual(DEFAULT_PARAMS.maxTorres)
+    for (const t of r.torres.filter((x) => x.cuadIds.length)) expect(t.distHubKm).toBeGreaterThan(DEFAULT_PARAMS.torreMinDistKm)
+  })
+  it('no se queda parada: carga en el HUB, tiene citas y pasa por la tienda Saga entre citas', () => {
+    for (const t of trips) {
+      const kinds = t.itinerary.map((l) => l.kind)
+      expect(kinds[0]).toBe('carga')
+      expect(kinds[kinds.length - 1]).toBe('regreso')
+      expect(kinds.filter((k) => k === 'cita').length).toBeGreaterThanOrEqual(2)
+      expect(kinds).toContain('tienda')
+      // el itinerario avanza en el tiempo
+      for (let i = 1; i < t.itinerary.length; i++) expect(t.itinerary[i].time).toBeGreaterThanOrEqual(t.itinerary[i - 1].time)
+    }
+  })
+  it('la Torre atiende a sus motos en los 3 turnos', () => {
+    const t = trips[0]
+    const shifts = new Set(r.scenarios.C.routes.filter((x) => x.depotId === t.torreId).map((x) => x.shift))
+    expect(shifts.size).toBe(3)
+  })
+  it('con "solo van" usa vans y alcanza para toda la carga', () => {
+    const rv = runSimulation({ ...input, params: { ...DEFAULT_PARAMS, torreVehicle: 'van' } })
+    for (const t of rv.scenarios.C.torreTrips) {
+      expect(t.vehicle).toBe('van')
+      expect(t.trucks * DEFAULT_PARAMS.vanCapacity).toBeGreaterThanOrEqual(t.orders)
+    }
   })
 })

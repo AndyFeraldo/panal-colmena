@@ -30,12 +30,40 @@ export interface Params {
   torreReachKm: number
   truckCapacity: number
   truckSpeedKmh: number
+  vanCapacity: number
+  torreVehicle: TorreVehicleMode // camión, van o lo que alcance (auto)
+  maxTorres: number // Torres como máximo: solo donde más ahorran (zonas lejanas)
   loadErrorManual: number
   loadErrorScan: number
   reloadMinutes: number
   shiftShares: [number, number, number] // reparto de rutas por turno
   respectBarriers: boolean // no juntar casillas separadas por vía rápida o río
   seed: number
+}
+
+export type TorreVehicleMode = 'auto' | 'camion' | 'van'
+export type TorreVehicle = 'camion' | 'van'
+
+/** Vehículo de la Torre según la carga: van si alcanza (y está permitida), si no camión(es) */
+export function pickVehicle(load: number, p: Params): { vehicle: TorreVehicle; count: number; cap: number } {
+  const mode = p.torreVehicle
+  if (mode === 'van' || (mode === 'auto' && load <= p.vanCapacity)) {
+    return {
+      vehicle: 'van',
+      count: Math.max(1, Math.ceil(load / p.vanCapacity)),
+      cap: p.vanCapacity,
+    }
+  }
+  return {
+    vehicle: 'camion',
+    count: Math.max(1, Math.ceil(load / p.truckCapacity)),
+    cap: p.truckCapacity,
+  }
+}
+
+export function vehicleLabel(vehicle: TorreVehicle, count: number): string {
+  if (vehicle === 'van') return count === 1 ? '1 van' : `${count} vans`
+  return count === 1 ? '1 camión' : `${count} camiones`
 }
 
 export type SizeKey = 'XS3' | 'XS2' | 'XS' | 'S' | 'M'
@@ -62,10 +90,13 @@ export const DEFAULT_PARAMS: Params = {
   cuadMaxStops: 50,
   cuadMergeMax: 50,
   cuadMinStops: 30,
-  torreMinDistKm: 10,
+  torreMinDistKm: 14,
   torreReachKm: 8,
   truckCapacity: 400,
   truckSpeedKmh: 28,
+  vanCapacity: 150,
+  torreVehicle: 'auto',
+  maxTorres: 2,
   loadErrorManual: 0.005,
   loadErrorScan: 0.0005,
   reloadMinutes: 10,
@@ -106,14 +137,7 @@ export interface ParamMeta {
   max?: number
 }
 
-const simple = (
-  key: keyof Params,
-  label: string,
-  source: SourceKind,
-  unit?: string,
-  display = 1,
-  extra: Partial<ParamMeta> = {},
-): ParamMeta => ({
+const simple = (key: keyof Params, label: string, source: SourceKind, unit?: string, display = 1, extra: Partial<ParamMeta> = {}): ParamMeta => ({
   key,
   label,
   source,
@@ -126,25 +150,50 @@ const simple = (
 
 export const PARAM_META: ParamMeta[] = [
   simple('ordersPerDay', 'Pedidos miniticket a domicilio por día (Lima)', 'SUPUESTO', 'pedidos', 1, { min: 2000, max: 8000, step: 100 }),
-  simple('mondayPeak', 'Pico de lunes', 'ENTREVISTA', '%', 100, { note: 'Cualitativo: "los lunes hay picos"', step: 1 }),
+  simple('mondayPeak', 'Pico de lunes', 'ENTREVISTA', '%', 100, {
+    note: 'Cualitativo: "los lunes hay picos"',
+    step: 1,
+  }),
   simple('hubCapacityPerHour', 'Capacidad de clasificación del HUB XD', 'RETO', 'ped/h', 1, { step: 50 }),
-  simple('pctPinToday', '% pedidos con coordenadas hoy', 'SUPUESTO', '%', 100, { note: 'Entrevista: "muchas no tienen"', step: 1 }),
+  simple('pctPinToday', '% pedidos con coordenadas hoy', 'SUPUESTO', '%', 100, {
+    note: 'Entrevista: "muchas no tienen"',
+    step: 1,
+  }),
   simple('pctPinWithPinF', '% pedidos con coordenadas con Pin f.', 'SUPUESTO', '%', 100, { step: 1 }),
   simple('geocodeMinPerOrder', 'Geocodificación manual por dirección', 'SUPUESTO', 'min', 1, { step: 0.1 }),
   simple('motoSpeedKmh', 'Velocidad de la moto en ciudad', 'SUPUESTO', 'km/h', 1, { step: 1 }),
   simple('detourFactor', 'Factor de rodeo (calles vs. línea recta)', 'SUPUESTO', '×', 1, { step: 0.05 }),
-  simple('minPerStop', 'Tiempo por parada', 'SUPUESTO', 'min', 1, { step: 0.1 }),
-  simple('backpackDm3', 'Capacidad de la mochila', 'SUPUESTO', 'dm³', 1, { note: 'Entrevista: tallas por volumen', step: 5 }),
+  simple('minPerStop', 'Tiempo por parada', 'SUPUESTO', 'min', 1, {
+    step: 0.1,
+  }),
+  simple('backpackDm3', 'Capacidad de la mochila', 'SUPUESTO', 'dm³', 1, {
+    note: 'Entrevista: tallas por volumen',
+    step: 5,
+  }),
   simple('cuadTargetStops', 'Objetivo de paquetes por cuadrante', 'DISEÑO', 'paquetes', 1, { note: 'Deja margen para llegar a 50 (meta SPR)', step: 1 }),
   simple('cuadMaxStops', 'Tope de paquetes por ruta (cuadrante)', 'RETO', 'paquetes', 1, { note: 'Meta SPR 50: ninguna ruta pasa de 50', step: 1 }),
   simple('torreMinDistKm', 'Distancia mínima al HUB para usar Torre', 'SUPUESTO', 'km', 1, { step: 0.5 }),
-  simple('torreReachKm', 'Alcance máximo de una Torre', 'SUPUESTO', 'km', 1, { step: 0.5 }),
+  simple('torreReachKm', 'Alcance máximo de una Torre', 'SUPUESTO', 'km', 1, {
+    step: 0.5,
+  }),
   simple('truckCapacity', 'Capacidad del camión Torre', 'SUPUESTO', 'pedidos', 1, { step: 10 }),
   simple('truckSpeedKmh', 'Velocidad del camión (madrugada)', 'SUPUESTO', 'km/h', 1, { step: 1 }),
+  simple('vanCapacity', 'Capacidad de la van Torre', 'SUPUESTO', 'pedidos', 1, {
+    note: 'Opción si Falabella acepta vans',
+    step: 10,
+  }),
+  simple('maxTorres', 'Torres como máximo', 'DISEÑO', 'Torres', 1, {
+    note: 'Mentoría: 1 o 2, solo en zonas lejanas',
+    step: 1,
+    min: 1,
+    max: 6,
+  }),
   simple('loadErrorManual', 'Error de carga por pedido (manual)', 'SUPUESTO', '%', 100, { step: 0.01 }),
   simple('loadErrorScan', 'Error de carga por pedido (escaneo doble)', 'SUPUESTO', '%', 100, { step: 0.01 }),
   simple('reloadMinutes', 'Tiempo para reabastecer la mochila en la Torre', 'SUPUESTO', 'min', 1, { step: 1 }),
-  simple('seed', 'Semilla aleatoria (demo reproducible)', 'DISEÑO', '', 1, { step: 1 }),
+  simple('seed', 'Semilla aleatoria (demo reproducible)', 'DISEÑO', '', 1, {
+    step: 1,
+  }),
 ]
 
 export function avgVolume(p: Params, cyber: boolean): number {

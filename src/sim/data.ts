@@ -73,26 +73,28 @@ export interface TorreZone extends LatLng {
   id: string
   name: string
   short: string
+  store: string // tienda Saga de la zona: la Torre pasa por ahí en su ronda (abastece y espera seguro)
 }
 
-// Puntos Torre candidatos [SUPUESTO] — nombres genéricos, sin tiendas reales
+// Zonas Torre candidatas [SUPUESTO]. Cada coordenada es la "tienda Saga de la zona" (ubicación genérica,
+// no una tienda real específica). Solo se usan las 1–2 que más ahorran (maxTorres).
 export const TORRE_ZONES: TorreZone[] = [
-  { id: 'C-MIR', short: 'Miraflores', name: 'Torre Miraflores', lat: -12.119, lng: -77.03 },
-  { id: 'C-SIS', short: 'San Isidro', name: 'Torre San Isidro', lat: -12.096, lng: -77.035 },
-  { id: 'C-SUR', short: 'Surco', name: 'Torre Surco', lat: -12.13, lng: -76.99 },
-  { id: 'C-PLI', short: 'Pueblo Libre', name: 'Torre Pueblo Libre', lat: -12.075, lng: -77.055 },
-  { id: 'C-OLI', short: 'Los Olivos', name: 'Torre Los Olivos', lat: -11.97, lng: -77.07 },
-  { id: 'C-SJL', short: 'SJL', name: 'Torre SJL', lat: -11.99, lng: -77.005 },
+  { id: 'C-NOR', short: 'Lima Norte', name: 'Torre Lima Norte', store: 'Tienda Saga Lima Norte', lat: -11.993, lng: -77.062 },
+  { id: 'C-MIR', short: 'Miraflores', name: 'Torre Miraflores', store: 'Tienda Saga Miraflores', lat: -12.119, lng: -77.03 },
+  { id: 'C-SIS', short: 'San Isidro', name: 'Torre San Isidro', store: 'Tienda Saga San Isidro', lat: -12.096, lng: -77.035 },
+  { id: 'C-SMI', short: 'San Miguel', name: 'Torre San Miguel', store: 'Tienda Saga San Miguel', lat: -12.077, lng: -77.085 },
+  { id: 'C-EST', short: 'Lima Este', name: 'Torre Lima Este', store: 'Tienda Saga Lima Este', lat: -12.005, lng: -76.99 },
 ]
 
-// Ana: cliente de la historia (Miraflores, compra audífonos el jueves 21:00)
+// Ana: cliente de la historia (Los Olivos, Lima Norte: lejos del HUB; compra audífonos el jueves 21:00)
 export const ANA = {
   id: 'F-208341',
   name: 'Ana',
-  lat: -12.1226,
-  lng: -77.0302,
-  address: 'Av. Larco 1150, dpto 4B, Miraflores',
-  reference: 'Edificio blanco, frente al parque',
+  district: 'Los Olivos',
+  lat: -11.9705,
+  lng: -77.0715,
+  address: 'Calle Los Jazmines 245, Los Olivos',
+  reference: 'Casa verde de 2 pisos, frente al parque',
   product: 'Audífonos inalámbricos',
 }
 

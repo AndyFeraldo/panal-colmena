@@ -8,6 +8,7 @@ import { borderNeighbors } from '../sim/cuadrantes'
 import { cuadrantesCrossingBarriers } from '../sim/barriers'
 import { DEMAND_LEVELS, WEEKDAYS } from '../sim/params'
 import { useSim } from '../store/useSim'
+import { vehicleLabel } from '../sim/params'
 
 export default function Planner() {
   return (
@@ -150,7 +151,7 @@ function PlannerInner() {
             <KpiCard label="Cuadrantes" value={stats.n} sub={`mapa ${map.level} · ${WEEKDAYS[map.weekday]}`} tone="dark" icon={<Diamond size={12} />} />
             <KpiCard label="Paquetes prom." value={fmtNum(stats.avg)} sub="por cuadrante · tope 50" />
             <KpiCard label="Cruzan distritos" value={fmtPct(stats.cross, 0)} sub="de los cuadrantes" />
-            <KpiCard label="Torres" value={stats.usedCol.length} sub={`${stats.inCol} cuadrantes · ${stats.usedCol.reduce((s, c) => s + c.trucks, 0)} camión(es)`} tone="turq" />
+            <KpiCard label="Torres" value={stats.usedCol.length} sub={`${stats.inCol} cuadrantes · ${stats.usedCol.map((c) => vehicleLabel(c.vehicle, c.trucks)).join(' + ')}`} tone="turq" />
           </div>
 
           <div className={`rounded-2xl p-4 ${stats.barrierCross.size === 0 ? 'bg-lima-soft' : 'bg-naranja-soft'}`}>

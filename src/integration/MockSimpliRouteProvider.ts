@@ -112,7 +112,7 @@ export class MockSimpliRouteProvider implements RoutingProvider {
             vehicle: `Moto ${r.label}`,
             zone: r.label,
             visits: r.deliveries,
-            start: r.depotId === 'HUB' ? 'HUB VES' : 'Torre (punto medio de sus cuadrantes)',
+            start: r.depotId === 'HUB' ? 'HUB VES' : 'Torre (punto de encuentro de sus cuadrantes)',
           })),
           '…': `${Math.max(0, routes.length - 2)} rutas más`,
         },

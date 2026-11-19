@@ -9,6 +9,7 @@ import { applyMoves, assignOrders } from '../sim/assign'
 import { orderCuadNames } from '../sim/cuadrantes'
 import { fmtTime } from '../sim/geo'
 import { useSim } from '../store/useSim'
+import { vehicleLabel } from '../sim/params'
 
 const TIMELINE = [
   { t: '14:00', label: 'Oleada 1 · 15%', wave: 1 },
@@ -99,7 +100,7 @@ function HubInner() {
     .map((c) => {
       const n = c.cuadIds.reduce((s, id) => s + (counts[id] ?? 0), 0)
       const vans = c.trucks + (approvedTrucks.includes(c.id) ? 1 : 0)
-      return { c, n, cap: params.truckCapacity * vans, vans }
+      return { c, n, cap: (c.vehicle === 'van' ? params.vanCapacity : params.truckCapacity) * vans, vans }
     })
   const pendingMoves = idx >= 2 ? assignment.moves.filter((m) => !approvedMoves.includes(m.cell)) : []
   // una alerta por cuadrante desbordado (puede ceder varias casillas a vecinos)
@@ -203,7 +204,7 @@ function HubInner() {
                   return (
                     <div key={t.torreId} className="rounded-xl bg-crema p-3">
                       <div className="flex items-center justify-between text-sm font-bold text-turq">
-                        ♜ {col.name} <span className="text-xs text-gris">sale {fmtTime(t.departure)} · {t.trucks} camión(es)</span>
+                        ♜ {col.name} <span className="text-xs text-gris">sale {fmtTime(t.departure)} · {vehicleLabel(t.vehicle, t.trucks)}</span>
                       </div>
                       <div className="mt-2 grid grid-cols-2 gap-1">
                         {t.cuadIds.map((pid) => {

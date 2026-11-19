@@ -5,7 +5,6 @@ import { SIZE_KEYS, avgVolume, type DemandLevel, type Params } from './params'
 import { cumulative, makeRng, normal, pickCumulative, type Rng } from './rng'
 import type { Order } from './types'
 
-
 // Curva de ventas del día anterior (00h..23h): baja de madrugada, cae en el almuerzo, sube fuerte 17:00–24:00 [ENTREVISTA]
 const SALES_CURVE = [1, 0.6, 0.4, 0.3, 0.3, 0.4, 0.8, 1.5, 2.5, 3.2, 3.5, 3.4, 2.6, 2.3, 2.8, 3.3, 3.8, 5, 6.5, 7.5, 8.2, 8.5, 7.8, 6]
 const SALES_CUM = cumulative(SALES_CURVE)
@@ -60,7 +59,7 @@ export function generateOrders(p: Params, level: DemandLevel, weekday: number): 
     id: ANA.id,
     lat: ANA.lat,
     lng: ANA.lng,
-    district: 'Miraflores',
+    district: ANA.district,
     createdAt: -180,
     wave: 3,
     u: 0,

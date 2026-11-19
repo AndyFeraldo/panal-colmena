@@ -156,7 +156,7 @@ function CompareInner() {
           <span className="text-xs text-white/70">Hoy → con TORRE f.</span>
         </div>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
-          <BeforeAfter label="Ventana de espera" before={`${sc.A.kpis.windowHours} h`} after={`${sc.C.kpis.windowHours} h`} note={'"de 8 a 8" → "entre 9 y 11"'} />
+          <BeforeAfter label="Ventana de espera" before={`${sc.A.kpis.windowHours} h`} after={`${sc.C.kpis.windowHours} h`} note={'"de 8 a 8" → ventana de 2 horas'} />
           <BeforeAfter label="Pedidos a tiempo" before={fmtPct(sc.A.kpis.otd, 0)} after={fmtPct(sc.C.kpis.otd, 0)} note="meta del reto: 96%" />
           <BeforeAfter label="Si no está en casa" before="1–2 días" after="mismo día" note="dato de mentoría, por validar" />
           <BeforeAfter
@@ -177,6 +177,7 @@ function CompareInner() {
         <Slider label="Pedidos por día (base)" value={params.ordersPerDay} min={2000} max={8000} step={250} onChange={(v) => setParams({ ordersPerDay: v })} fmt={fmtInt} tag={<Tag kind="SUPUESTO" />} />
         <Slider label="% pedidos con pin (con Pin f.)" value={pctPin} min={0.5} max={1} step={0.01} onChange={setPctPin} fmt={(v) => fmtPct(v, 0)} tag={<Tag kind="SUPUESTO">Hoy: {fmtPct(params.pctPinToday, 0)}</Tag>} />
         <Slider label="Distancia mínima para Torre" value={params.torreMinDistKm} min={0} max={20} step={0.5} onChange={(v) => setParams({ torreMinDistKm: v })} fmt={(v) => `${fmtNum(v)} km`} />
+        <Slider label="Torres como máximo" value={params.maxTorres} min={1} max={5} step={1} onChange={(v) => setParams({ maxTorres: v })} fmt={(v) => `${v} Torre${v === 1 ? "" : "s"}`} tag={<Tag kind="DISEÑO">Mentoría: 1 o 2</Tag>} />
         <Slider label="Tamaño de mochila" value={params.backpackDm3} min={60} max={200} step={5} onChange={(v) => setParams({ backpackDm3: v })} fmt={(v) => `${v} dm³`} />
         <Slider label="Tiempo por parada" value={params.minPerStop} min={2} max={6} step={0.1} onChange={(v) => setParams({ minPerStop: v })} fmt={(v) => `${fmtNum(v)} min`} />
       </div>

@@ -148,12 +148,20 @@ export function finalizeRoutes(
   serviceMult: (o: Order) => number,
 ): Route[] {
   const sorted = [...drafts].sort((a, b) => a.availableTime - b.availableTime)
-  const n = sorted.length
-  const cut1 = Math.round(n * p.shiftShares[0])
-  const cut2 = cut1 + Math.round(n * p.shiftShares[1])
+  // Turnos (50/35/15 %) repartidos DENTRO de cada depósito: cada zona Torre trabaja los 3 turnos,
+  // así su Torre tiene cita a las 06:00, 12:00 y 18:00 (y no solo en la mañana)
+  const shiftOf = new Map<RouteDraft, 1 | 2 | 3>()
+  const byDepot = new Map<string, RouteDraft[]>()
+  for (const d of sorted) byDepot.set(d.depotId, [...(byDepot.get(d.depotId) ?? []), d])
+  for (const group of byDepot.values()) {
+    const n = group.length
+    const cut1 = Math.round(n * p.shiftShares[0])
+    const cut2 = cut1 + Math.round(n * p.shiftShares[1])
+    group.forEach((d, i) => shiftOf.set(d, (i < cut1 ? 1 : i < cut2 ? 2 : 3) as 1 | 2 | 3))
+  }
   let riderIdx = 0
   return sorted.map((d, i) => {
-    const shift = d.fixedShift ?? ((i < cut1 ? 1 : i < cut2 ? 2 : 3) as 1 | 2 | 3)
+    const shift = d.fixedShift ?? shiftOf.get(d)!
     const sh = SHIFTS[shift - 1]
     const startTime = Math.max(sh.start, d.availableTime)
     const tl = buildTimeline(d, startTime, p, serviceMult)

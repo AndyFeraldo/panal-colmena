@@ -130,7 +130,7 @@ function buildItems(r: SimResult, cyber: { otd: number; motos: number; trucks: n
       id: 'E5',
       source: 'ENTREVISTA',
       need: '"Un camión que alimente a la moto"; "pueden recargar en tiendas"',
-      piece: 'Torre A, B, C… en el punto medio de sus cuadrantes',
+      piece: 'Torres móviles (1–2, solo zonas lejanas): citas a horas fijas + tienda Saga',
       evidence: `${C.torreTrips.length} Torres y ${c.trucks} camiones esta noche; las motos de ${C.torreTrips.reduce((s, t) => s + t.cuadIds.length, 0)} cuadrantes salen de su Torre.`,
       verdict: 'ok',
       to: '/torre',

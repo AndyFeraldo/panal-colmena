@@ -81,7 +81,7 @@ function CheckoutInner() {
   return (
     <div>
       <ScreenHeader kicker="🛒 Cliente · al comprar" title="Pin f.: marca tu puerta" hint="El pin solo aparece si no sabemos dónde está la puerta. Un toque y el pedido ya sabe su cuadrante y su Torre.">
-        Ana (Miraflores) compra unos audífonos el jueves a las 21:00. Al pagar arrastra el pin hasta su puerta.
+        Ana (Los Olivos, Lima Norte) compra unos audífonos el jueves a las 21:00. Al pagar arrastra el pin hasta su puerta.
       </ScreenHeader>
       <div className="grid items-start gap-6 lg:grid-cols-[400px_1fr]">
         <PhoneFrame

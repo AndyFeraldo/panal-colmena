@@ -26,7 +26,7 @@ export function anaContext(r: SimResult | null) {
 export function demoSteps(r: SimResult | null): DemoStep[] {
   const a = anaContext(r)
   const cuadrante = a?.cuadrante?.name ?? 'A3'
-  const col = a?.torre?.short ?? 'Miraflores'
+  const col = a?.torre?.short ?? 'Lima Norte'
   const ms = r ? r.assignment.timeMs.toFixed(1).replace('.', ',') : '4'
   const n = r ? String(r.orders.length).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '4.000'
   const k = r?.scenarios
@@ -60,7 +60,7 @@ export function demoSteps(r: SimResult | null): DemoStep[] {
     {
       path: '/torre',
       title: '6 · Cada moto tiene su Torre',
-      text: `${fmtTime(trip?.departure ?? 330)} sale el camión Torre ${a?.torre?.letter ?? 'A'} y se estaciona en medio de sus cuadrantes (${col}). Escanea cada bolsa, y si a una Torre le sobran paquetes, se los pasa a la vecina.`,
+      text: `${fmtTime(trip?.departure ?? 330)} la Torre ${a?.torre?.letter ?? 'A'} carga en el HUB y va hacia ${col}: se cita con sus motos a horas fijas y entre citas espera en la tienda Saga de la zona. No se queda parada en la calle. Escanea cada caja, y si a una Torre le sobran paquetes, se los pasa a la vecina.`,
     },
     {
       path: '/motorizado',

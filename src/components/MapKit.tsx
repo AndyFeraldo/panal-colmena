@@ -4,6 +4,7 @@ import { CircleMarker, GeoJSON, MapContainer, Marker, Pane, Polygon, Polyline, T
 import GoogleMutant from 'leaflet.gridlayer.googlemutant/src/Leaflet.GoogleMutant.mjs'
 import { CLEAN_STYLE, GOOGLE_KEY, loadGoogleMaps, useGoogleMaps } from './googleMaps'
 import { DISTRICT_GEOJSON, HUB, type LatLng } from '../sim/data'
+import { vehicleLabel } from '../sim/params'
 import { BARRIERS } from '../sim/barriers'
 import type { Torre, Cuadrante, Route } from '../sim/types'
 import { cellBoundary, cellCenter, cellEdges, cellParity } from '../sim/grid'
@@ -47,14 +48,7 @@ export function BaseMap({
   scrollWheel?: boolean
 }) {
   return (
-    <MapContainer
-      center={center}
-      zoom={zoom}
-      className={`${className} w-full rounded-2xl`}
-      preferCanvas
-      scrollWheelZoom={scrollWheel}
-      zoomSnap={0.5}
-    >
+    <MapContainer center={center} zoom={zoom} className={`${className} w-full rounded-2xl`} preferCanvas scrollWheelZoom={scrollWheel} zoomSnap={0.5}>
       <BaseTiles />
       {children}
     </MapContainer>
@@ -74,7 +68,11 @@ function BaseTiles() {
 
   useEffect(() => {
     if (!useGoogle || status !== 'ready') return
-    const layer = new GoogleMutant({ type: 'roadmap', styles: CLEAN_STYLE, maxZoom: 21 })
+    const layer = new GoogleMutant({
+      type: 'roadmap',
+      styles: CLEAN_STYLE,
+      maxZoom: 21,
+    })
     layer.addTo(map)
     return () => {
       map.removeLayer(layer)
@@ -164,10 +162,22 @@ export function BarrierLayer({ highlight }: { highlight?: boolean }) {
     <Pane name="barriers" style={{ zIndex: 450 }}>
       {BARRIERS.map((b) => (
         <Fragment key={b.id}>
-          <Polyline positions={b.path} interactive={false} pathOptions={{ color: '#ffffff', weight: highlight ? 9 : 7, opacity: 0.9 }} />
           <Polyline
             positions={b.path}
-            pathOptions={{ color: b.kind === 'via' ? '#F26B21' : '#2B7BB9', weight: highlight ? 5 : 3.5, opacity: 0.95 }}
+            interactive={false}
+            pathOptions={{
+              color: '#ffffff',
+              weight: highlight ? 9 : 7,
+              opacity: 0.9,
+            }}
+          />
+          <Polyline
+            positions={b.path}
+            pathOptions={{
+              color: b.kind === 'via' ? '#F26B21' : '#2B7BB9',
+              weight: highlight ? 5 : 3.5,
+              opacity: 0.95,
+            }}
           >
             <Tooltip sticky>
               {b.kind === 'via' ? '🛣️' : '🌊'} {b.name} · ningún cuadrante la cruza (trazo aproximado)
@@ -251,8 +261,14 @@ export function MapLegend({ mode, breaks, unit = 'paquetes por casilla' }: { mod
   if (mode === 'tablero')
     return (
       <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-gris">
-        <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rotate-45 rounded-[2px] bg-bosque" />Cuadrante negro: lo abastece una Torre</span>
-        <span className="flex items-center gap-1"><i className="inline-block h-3 w-3 rotate-45 rounded-[2px] border border-gris/40 bg-white" />Cuadrante blanco: sale directo del HUB</span>
+        <span className="flex items-center gap-1">
+          <i className="inline-block h-3 w-3 rotate-45 rounded-[2px] bg-bosque" />
+          Cuadrante negro: lo abastece una Torre
+        </span>
+        <span className="flex items-center gap-1">
+          <i className="inline-block h-3 w-3 rotate-45 rounded-[2px] border border-gris/40 bg-white" />
+          Cuadrante blanco: sale directo del HUB
+        </span>
       </div>
     )
   return <div className="text-[11px] font-semibold text-gris">Cada color es un cuadrante (1 ruta de ≤50 paquetes). Dos vecinos nunca comparten color.</div>
@@ -287,7 +303,11 @@ export function CuadranteLayer({
   const hb = useMemo(() => breaks ?? heatBreaks(Object.values(heat ?? {})), [breaks, heat])
   // bordes entre cuadrantes distintos (o con el exterior): un solo trazo multi-segmento
   const outlines = useMemo(() => {
-    if (!showOutline) return { all: [] as [number, number][][], sel: [] as [number, number][][] }
+    if (!showOutline)
+      return {
+        all: [] as [number, number][][],
+        sel: [] as [number, number][][],
+      }
     const all: [number, number][][] = []
     const sel: [number, number][][] = []
     for (const [cell, id] of Object.entries(cellToCuad)) {
@@ -345,7 +365,15 @@ export function CuadranteLayer({
         )
       })}
       {showOutline && (
-        <Polyline positions={outlines.all} interactive={false} pathOptions={{ color: lineColor, weight: mode === 'tablero' ? 2.2 : 1.6, opacity: 0.85 }} />
+        <Polyline
+          positions={outlines.all}
+          interactive={false}
+          pathOptions={{
+            color: lineColor,
+            weight: mode === 'tablero' ? 2.2 : 1.6,
+            opacity: 0.85,
+          }}
+        />
       )}
       {outlines.sel.length > 0 && <Polyline positions={outlines.sel} interactive={false} pathOptions={{ color: '#F26B21', weight: 4, opacity: 1 }} />}
     </>
@@ -399,7 +427,11 @@ export function CellLabels({ demand, minZoom = 14 }: { demand: Record<string, nu
             key={c}
             position={[p.lat, p.lng]}
             interactive={false}
-            icon={L.divIcon({ className: 'leaflet-div-icon clean', html: `<div class="cell-label">${Math.round(demand[c])}</div>`, iconSize: [24, 20] })}
+            icon={L.divIcon({
+              className: 'leaflet-div-icon clean',
+              html: `<div class="cell-label">${Math.round(demand[c])}</div>`,
+              iconSize: [24, 20],
+            })}
           />
         )
       })}
@@ -431,6 +463,32 @@ export function torreIcon(label: string, active = false) {
   })
 }
 
+export const storeIcon = L.divIcon({
+  className: 'leaflet-div-icon clean',
+  html: `<div style="background:#fff;color:#12301F;border:2px solid #F26B21;font:700 10px Poppins;padding:2px 7px;border-radius:8px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25)">🏬 Tienda Saga</div>`,
+  iconSize: [92, 22],
+  iconAnchor: [46, -6],
+})
+
+/** Recorrido del día de una Torre: HUB → punto de encuentro ⇄ tienda Saga (no se queda parada) */
+export function TorreTripLayer({ torre }: { torre: Torre }) {
+  return (
+    <Polyline
+      positions={[
+        [HUB.lat, HUB.lng],
+        [torre.lat, torre.lng],
+      ]}
+      pathOptions={{
+        color: '#00808D',
+        weight: 3,
+        opacity: 0.6,
+        dashArray: '10 8',
+      }}
+      interactive={false}
+    />
+  )
+}
+
 export function torreLabel(t: Torre): string {
   return t.letter ? `Torre ${t.letter} · ${t.short}` : `Torre ${t.short}`
 }
@@ -439,11 +497,13 @@ export function TorreMarkers({
   torres,
   cuadrantes,
   showLinks = true,
+  showStores = true,
   activeId,
 }: {
   torres: Torre[]
   cuadrantes: Cuadrante[]
   showLinks?: boolean
+  showStores?: boolean
   activeId?: string | null
 }) {
   const byId = new Map(cuadrantes.map((p) => [p.id, p]))
@@ -464,16 +524,41 @@ export function TorreMarkers({
                       [c.lat, c.lng],
                       [p.centroid.lat, p.centroid.lng],
                     ]}
-                    pathOptions={{ color: '#00808D', weight: 1.5, opacity: 0.7, dashArray: '2 4' }}
+                    pathOptions={{
+                      color: '#00808D',
+                      weight: 1.5,
+                      opacity: 0.7,
+                      dashArray: '2 4',
+                    }}
                     interactive={false}
                   />
                 )
               })}
             <Marker position={[c.lat, c.lng]} icon={torreIcon(torreLabel(c), activeId === c.id)} zIndexOffset={500}>
               <Tooltip>
-                {torreLabel(c)} · punto medio de {c.cuadIds.length} cuadrantes · ~{Math.round(c.expLoad)} paquetes · {c.trucks} camión(es)
+                {torreLabel(c)} · punto de encuentro de {c.cuadIds.length} cuadrantes · ~{Math.round(c.expLoad)} paquetes · {vehicleLabel(c.vehicle, c.trucks)}
               </Tooltip>
             </Marker>
+            {showStores && (
+              <>
+                <Polyline
+                  positions={[
+                    [c.lat, c.lng],
+                    [c.storeLat, c.storeLng],
+                  ]}
+                  pathOptions={{
+                    color: '#F26B21',
+                    weight: 2.5,
+                    opacity: 0.9,
+                    dashArray: '6 5',
+                  }}
+                  interactive={false}
+                />
+                <Marker position={[c.storeLat, c.storeLng]} icon={storeIcon} zIndexOffset={400}>
+                  <Tooltip>{c.store} (ubicación genérica): entre citas, la Torre abastece la tienda y espera en su estacionamiento</Tooltip>
+                </Marker>
+              </>
+            )}
           </Fragment>
         ))}
     </>
@@ -503,7 +588,12 @@ export function RouteLine({ route, color = '#12301F', numbered = false, weight =
               key={s.seq}
               center={[s.lat, s.lng]}
               radius={s.orderId === 'F-208341' ? 9 : 5}
-              pathOptions={{ color: '#fff', weight: 1.5, fillColor: s.orderId === 'F-208341' ? '#F26B21' : color, fillOpacity: 1 }}
+              pathOptions={{
+                color: '#fff',
+                weight: 1.5,
+                fillColor: s.orderId === 'F-208341' ? '#F26B21' : color,
+                fillOpacity: 1,
+              }}
             >
               <Tooltip>
                 #{s.seq} · {s.orderId}

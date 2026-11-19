@@ -10,7 +10,7 @@ const USERS = [
   { to: '/planificador', icon: '🗺️', who: 'Planificador', what: 'Mapa de calor y cuadrantes' },
   { to: '/hub', icon: '🏭', who: 'Jefe de HUB', what: '02:30: todo asignado en ms' },
   { to: '/admin', icon: '⚖️', who: 'Administrador', what: '¿Más de 50? Lo reparte' },
-  { to: '/torre', icon: '♜', who: 'Encargado de Torre', what: 'Entrega y escanea bolsas' },
+  { to: '/torre', icon: '♜', who: 'Encargado de Torre', what: 'Torre móvil: citas y cajas' },
   { to: '/motorizado', icon: '🛵', who: 'Motorizado', what: 'Sin paquetes → a su Torre' },
   { to: '/gerencia', icon: '📊', who: 'Gerencia', what: 'Resultados: hoy vs TORRE f.' },
 ]
@@ -18,8 +18,8 @@ const USERS = [
 // Qué herramienta usa cada uno (feedback del mentor: no sumar apps ni pasos innecesarios)
 const APPS = [
   { icon: '🛒', who: 'Cliente', uses: 'Web y app de Falabella + el WhatsApp de siempre', change: 'el pin solo si su dirección no tiene ubicación; recibe "llega entre 9 y 11"', newTool: false },
-  { icon: '🛵', who: 'Motorizado', uses: 'La app de SimpliRoute de siempre', change: 'su ruta empieza en la Torre y recarga ahí, no en VES', newTool: false },
-  { icon: '♜', who: 'Encargado de Torre', uses: 'Celular con escáner del proveedor', change: 'escanea cada bolsa al dársela a la moto (el único paso nuevo en la calle)', newTool: false },
+  { icon: '🛵', who: 'Motorizado', uses: 'La app de SimpliRoute de siempre', change: 'en zonas lejanas recoge y cambia su caja en la cita con la Torre, no vuelve a VES', newTool: false },
+  { icon: '♜', who: 'Encargado de Torre', uses: 'Celular con escáner del proveedor', change: 'escanea cada caja al dársela a la moto en cada cita (el único paso nuevo en la calle)', newTool: false },
   { icon: '🗺️', who: 'Oficina y HUB', uses: 'Tablero f. (web) → publica en SimpliRoute', change: 'arma los cuadrantes de día; a las 02:30 solo se clasifica', newTool: true },
 ]
 

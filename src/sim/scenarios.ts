@@ -2,9 +2,9 @@ import { HUB } from './data'
 import { haversineKm, roadKm } from './geo'
 import { cuadAdjacency } from './cuadrantes'
 import { latLngToCell } from './grid'
-import { SHIFTS, WAVES, type Params } from './params'
+import { SHIFTS, WAVES, pickVehicle, type Params } from './params'
 import { finalizeRoutes, sequenceRoute, type RouteDraft } from './routing'
-import type { Assignment, Kpis, Order, RiderSplit, Route, ScenarioKey, ScenarioResult, Spill, Tablero, Torre, TorreTrip } from './types'
+import type { Assignment, Kpis, Order, RiderSplit, Route, ScenarioKey, ScenarioResult, Spill, Tablero, Torre, TorreLeg, TorreTrip } from './types'
 
 const LOAD_MIN = 15 // minutos de carga del vehículo en el HUB
 
@@ -29,16 +29,18 @@ export function sortEndTime(orders: Order[], p: Params): number {
   return WAVES[2].time + (n3 / p.hubCapacityPerHour) * 60
 }
 
-function draftFrom(
-  label: string,
-  depotId: string,
-  depot: { lat: number; lng: number },
-  orders: Order[],
-  cuadId?: string,
-  part?: number,
-): RouteDraft {
+function draftFrom(label: string, depotId: string, depot: { lat: number; lng: number }, orders: Order[], cuadId?: string, part?: number): RouteDraft {
   const seq = sequenceRoute(depot, orders)
-  return { label, cuadId, part, depotId, depot, orders: seq.map((i) => orders[i]), readyTime: 0, availableTime: 0 }
+  return {
+    label,
+    cuadId,
+    part,
+    depotId,
+    depot,
+    orders: seq.map((i) => orders[i]),
+    readyTime: 0,
+    availableTime: 0,
+  }
 }
 
 /**
@@ -114,7 +116,15 @@ export function baselineDistrictFifo(orders: Order[], p: Params, serviceMult: (o
     windowHours: 12,
     scanDepots: new Set(),
   })
-  return { key: 'A', routes, kpis, torreTrips: [], splits: [], spills: [], orderRoute: orderRouteMap(routes) }
+  return {
+    key: 'A',
+    routes,
+    kpis,
+    torreTrips: [],
+    splits: [],
+    spills: [],
+    orderRoute: orderRouteMap(routes),
+  }
 }
 
 /**
@@ -146,9 +156,7 @@ export function tableroScenario(
   const cuadDepot = new Map<string, string>()
   if (useTorre) {
     for (const t of torres) {
-      const cuadIds = t.cuadIds
-        .filter((id) => byCuad.has(id))
-        .sort((a, b) => haversineKm(cuadById.get(a)!.centroid, t) - haversineKm(cuadById.get(b)!.centroid, t))
+      const cuadIds = t.cuadIds.filter((id) => byCuad.has(id)).sort((a, b) => haversineKm(cuadById.get(a)!.centroid, t) - haversineKm(cuadById.get(b)!.centroid, t))
       let load = 0
       const accepted: string[] = []
       const maxTrucks = Math.max(2, t.trucks + 1)
@@ -160,15 +168,18 @@ export function tableroScenario(
         cuadDepot.set(id, t.id)
       }
       if (accepted.length === 0) continue
-      const trucks = Math.max(1, Math.ceil(load / p.truckCapacity))
+      const v = pickVehicle(load, p)
       trips.push({
         torreId: t.id,
-        trucks,
+        trucks: v.count,
+        vehicle: v.vehicle,
         orders: load,
         departure: 0,
         arrival: 0,
         cuadIds: accepted,
-        secondTruckAlert: trucks > t.trucks,
+        // alerta si esta noche hace falta un vehículo más (o un camión en vez de la van del plan)
+        secondTruckAlert: v.count > t.trucks || v.vehicle !== t.vehicle,
+        itinerary: [],
       })
     }
   }
@@ -188,7 +199,10 @@ export function tableroScenario(
     splits.push({
       cuadId,
       orders: list.length,
-      parts: parts.map((part) => ({ cells: [...new Set(part.map((o) => latLngToCell(o.lat, o.lng)))], orders: part.length })),
+      parts: parts.map((part) => ({
+        cells: [...new Set(part.map((o) => latLngToCell(o.lat, o.lng)))],
+        orders: part.length,
+      })),
     })
     parts.forEach((part, j) => drafts.push(draftFrom(`${name}·${j + 1}`, depotId, depot, part, cuadId, j + 1)))
   }
@@ -197,11 +211,7 @@ export function tableroScenario(
   const torreOrder = [...trips].sort((a, b) => b.orders - a.orders)
   const priority: RouteDraft[] = []
   for (const t of torreOrder) priority.push(...drafts.filter((d) => d.depotId === t.torreId))
-  priority.push(
-    ...drafts
-      .filter((d) => d.depotId === 'HUB')
-      .sort((a, b) => haversineKm(b.orders[0] ?? HUB, HUB) - haversineKm(a.orders[0] ?? HUB, HUB)),
-  )
+  priority.push(...drafts.filter((d) => d.depotId === 'HUB').sort((a, b) => haversineKm(b.orders[0] ?? HUB, HUB) - haversineKm(a.orders[0] ?? HUB, HUB)))
   const sorted = sortTimes(
     orders,
     priority.flatMap((d) => d.orders),
@@ -219,6 +229,13 @@ export function tableroScenario(
   for (const d of drafts) if (d.depotId === 'HUB') d.availableTime = d.readyTime
 
   const routes = finalizeRoutes(drafts, key, p, serviceMult)
+  for (const t of trips)
+    t.itinerary = buildItinerary(
+      t,
+      torreById.get(t.torreId)!,
+      routes.filter((r) => r.depotId === t.torreId),
+      p,
+    )
   const kpis = computeKpis(key, routes, orders, p, {
     decisionMs: assignment.timeMs,
     geocodeMin: assignment.withoutCoords * p.geocodeMinPerOrder,
@@ -226,7 +243,103 @@ export function tableroScenario(
     windowHours: 2,
     scanDepots: new Set(trips.map((t) => t.torreId)),
   })
-  return { key, routes, kpis, torreTrips: trips, splits, spills, orderRoute: orderRouteMap(routes) }
+  return {
+    key,
+    routes,
+    kpis,
+    torreTrips: trips,
+    splits,
+    spills,
+    orderRoute: orderRouteMap(routes),
+  }
+}
+
+const CITA_WINDOW = 40 // minutos: las motos que necesitan caja dentro de esta ventana se juntan en una sola cita
+
+/**
+ * El día de la Torre móvil: carga en el HUB → citas con sus motos en el punto de encuentro (inicio de turno y
+ * recargas, agrupadas en ventanas de 40 min) → entre citas largas va a la tienda Saga de su zona (abastece la
+ * tienda y espera en su estacionamiento, no en la calle) → al final recoge los no entregados y vuelve al HUB.
+ */
+export function buildItinerary(t: TorreTrip, torre: Torre, routes: Route[], p: Params): TorreLeg[] {
+  const meet = { lat: torre.lat, lng: torre.lng }
+  const store = { lat: torre.storeLat, lng: torre.storeLng }
+  const drive = (a: { lat: number; lng: number }, b: { lat: number; lng: number }) => (roadKm(a, b, p.detourFactor) / p.truckSpeedKmh) * 60
+  const legs: TorreLeg[] = [
+    {
+      time: t.departure,
+      kind: 'carga',
+      place: 'HUB XD Villa El Salvador',
+      lat: HUB.lat,
+      lng: HUB.lng,
+      motos: 0,
+      boxes: routes.length + routes.reduce((s, r) => s + r.reloads, 0),
+      note: `Carga las cajas ya armadas: 1 por moto + sus recargas (${t.orders} pedidos)`,
+    },
+  ]
+  const events = routes
+    .flatMap((r) => [{ time: r.startTime, route: r.id }, ...r.stops.filter((s) => s.kind === 'reload').map((s) => ({ time: s.eta, route: r.id }))])
+    .sort((a, b) => a.time - b.time)
+  const citas: {
+    start: number
+    end: number
+    routes: Set<string>
+    boxes: number
+  }[] = []
+  for (const e of events) {
+    const last = citas[citas.length - 1]
+    if (last && e.time - last.start <= CITA_WINDOW) {
+      last.end = e.time
+      last.routes.add(e.route)
+      last.boxes++
+    } else
+      citas.push({
+        start: e.time,
+        end: e.time,
+        routes: new Set([e.route]),
+        boxes: 1,
+      })
+  }
+  const toStore = drive(meet, store)
+  citas.forEach((c, i) => {
+    legs.push({
+      time: Math.round(c.start),
+      kind: 'cita',
+      place: 'Punto de encuentro',
+      lat: meet.lat,
+      lng: meet.lng,
+      motos: c.routes.size,
+      boxes: c.boxes,
+      note: i === 0 ? 'Cada moto recoge su 1.ª caja' : 'Las motos sin paquetes cambian su caja vacía por una llena',
+    })
+    const next = citas[i + 1]
+    const leave = c.end + p.reloadMinutes
+    // entre citas espera en la tienda Saga de la zona (abastece la tienda; estacionamiento seguro, no en la calle)
+    if (!next || next.start - leave >= 2 * toStore + 20) {
+      legs.push({
+        time: Math.round(leave + toStore),
+        kind: 'tienda',
+        place: torre.store,
+        lat: store.lat,
+        lng: store.lng,
+        motos: 0,
+        boxes: 0,
+        note: next ? 'Abastece la tienda y espera en su estacionamiento hasta la próxima cita' : 'Abastece la tienda y guarda los reprogramados del día',
+      })
+    }
+  })
+  const lastEnd = Math.max(...routes.map((r) => r.endTime), citas.length ? citas[citas.length - 1].end : t.arrival)
+  legs.push({
+    time: Math.round(lastEnd + 15),
+    kind: 'regreso',
+    place: 'Punto de encuentro → HUB',
+    lat: HUB.lat,
+    lng: HUB.lng,
+    motos: 0,
+    boxes: 0,
+    note: `Recoge los no entregados (cliente ausente, dirección errada) y vuelve al HUB: llega ~${Math.round(drive(meet, HUB))} min después`,
+  })
+  return legs
 }
 
 /**
@@ -304,7 +417,13 @@ export function computeKpis(
   routes: Route[],
   orders: Order[],
   p: Params,
-  extra: { decisionMs: number; geocodeMin: number; trucks: number; windowHours: number; scanDepots: Set<string> },
+  extra: {
+    decisionMs: number
+    geocodeMin: number
+    trucks: number
+    windowHours: number
+    scanDepots: Set<string>
+  },
 ): Kpis {
   const total = routes.reduce((s, r) => s + r.deliveries, 0)
   let onTime = 0

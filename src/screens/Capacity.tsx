@@ -29,7 +29,7 @@ function CapacityInner() {
 
   const normal = capacity?.find((r) => r.level === 'Normal')
   const cyber = capacity?.find((r) => r.level === 'Cyber')
-  const chart = capacity?.map((r) => ({ name: r.level, 'Motos hoy': r.motosToday, 'Motos TORRE f.': r.motosTorre, Camiones: r.trucks })) ?? []
+  const chart = capacity?.map((r) => ({ name: r.level, 'Motos hoy': r.motosToday, 'Motos TORRE f.': r.motosTorre, "Vehículos Torre": r.trucks })) ?? []
 
   return (
     <div>
@@ -45,7 +45,7 @@ function CapacityInner() {
         }
       >
         Corremos el mismo día con los 4 niveles de demanda (Bajo ×{fmtNum(params.levelMult.Bajo)}, Normal ×1, Alto ×{fmtNum(params.levelMult.Alto)}, Cyber ×{fmtNum(params.levelMult.Cyber, 0)}) sobre {fmtInt(params.ordersPerDay)}{' '}
-        pedidos base. Motos = rutas del turno con más rutas (cada moto hace un turno). Camiones = camiones Torre que salen del HUB.
+        pedidos base. Motos = rutas del turno con más rutas (cada moto hace un turno). Vehículos = camiones o vans Torre que salen del HUB.
       </ScreenHeader>
 
       {!capacity ? (
@@ -67,7 +67,7 @@ function CapacityInner() {
                     </div>
                     <div className="mt-3 grid grid-cols-3 gap-3">
                       <Big icon={<Bike size={16} />} value={r.motosTorre} label="motos (turno pico)" sub={`hoy: ${r.motosToday}`} />
-                      <Big icon={<Truck size={16} />} value={r.trucks} label="camiones Torre" sub={`${r.torres} Torres`} />
+                      <Big icon={<Truck size={16} />} value={r.trucks} label="vehículos Torre" sub={`${r.torres} Torres`} />
                       <Big icon={<Factory size={16} />} value={fmtTime(r.sortEnd)} label="HUB termina" sub="700 ped/h" />
                     </div>
                     <div className="mt-3 text-xs opacity-90">
